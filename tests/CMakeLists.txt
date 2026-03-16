@@ -6,7 +6,6 @@ include(Catch)
 
 add_executable(splice_tests
         test_registry.cpp
-        test_shadow.cpp
         test_priority.cpp
 )
 

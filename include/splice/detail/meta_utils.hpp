@@ -124,19 +124,4 @@ namespace splice
   template<typename T>
   using ChainTuple = decltype(chain_tuple_impl<T, hookable_methods<T>()>(
       std::make_index_sequence<hookable_methods<T>().size()> { }));
-
-  /// @brief Returns `true` at compile time if @p Member is a direct member of @p T.
-  ///
-  /// Used by `shadow_get` and `shadow_set` to enforce ownership at the call site.
-  ///
-  /// @tparam T      The class to check membership against.
-  /// @tparam Member A reflection of the member to look up.
-  template<typename T, std::meta::info Member>
-  consteval bool member_belongs_to()
-  {
-    for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-      if (m == Member)
-        return true;
-    return false;
-  }
 } // namespace splice

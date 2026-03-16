@@ -9,7 +9,6 @@
 #include "splice/detail/priority.hpp"
 #include "splice/detail/registry.hpp"
 #include "splice/detail/result.hpp"
-#include "splice/detail/shadow.hpp"
 
 /// @brief Declares a shared hook registry handle for the given class.
 ///
