@@ -43,12 +43,17 @@ namespace splice::detail
   ///
   /// Lower priority values run first.
   ///
+  /// The `listener` field is used by `splice::wire::SignalRegistry` to track
+  /// which `Connectable` instance owns this hook so it can be removed on
+  /// disconnect. For `splice::hook::ClassRegistry` hooks it is always `nullptr`.
+  ///
   /// @tparam Fn The hook's callable type.
   template<typename Fn>
   struct HookEntry
   {
     Fn fn;
     int priority = splice::hook::Priority::Normal;
+    void *listener = nullptr;
   };
 
   /// @brief Holds the original function and all registered hooks for a single hookable method.
@@ -112,13 +117,13 @@ namespace splice::detail
     /// @param fn       The hook callable.
     /// @param priority Execution order relative to other hooks at the same point.
     /// @returns `std::expected<void, splice::hook::HookError>`.
-    std::expected<void, splice::hook::HookError> add(
-        splice::hook::InjectPoint point, Hook fn, int priority = splice::hook::Priority::Normal)
+    std::expected<void, splice::hook::HookError> add(splice::hook::InjectPoint point, Hook fn,
+        int priority = splice::hook::Priority::Normal, void *listener = nullptr)
     {
       auto &vec = hooks_for(point);
       auto it = std::lower_bound(
           vec.begin(), vec.end(), priority, [](const HookEntry<Hook> &e, int p) { return e.priority < p; });
-      vec.insert(it, HookEntry<Hook> { std::move(fn), priority });
+      vec.insert(it, HookEntry<Hook> { std::move(fn), priority, listener });
       return { };
     }
 

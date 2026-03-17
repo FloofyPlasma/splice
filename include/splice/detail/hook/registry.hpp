@@ -52,7 +52,7 @@ namespace splice::hook
     splice::detail::ChainTuple<T> m_chains;
 
     /// @brief Initialises every chain with its original function wrapper.
-    /// Private — use `shared()` or `make_isolated()` to obtain an instance.
+    /// Private, use `shared()` or `make_isolated()` to obtain an instance.
     ClassRegistry()
     {
       template for (constexpr std::meta::info m: Methods)
@@ -131,7 +131,7 @@ namespace splice::hook
     /// @tparam Fn       The callable type of the hook.
     /// @param  fn       The hook to register.
     /// @param  priority Execution order relative to other hooks at the same point.
-    /// @returns `std::expected<void, HookError>`. Always check the return value —
+    /// @returns `std::expected<void, HookError>`. Always check the return value,
     ///          unhandled errors produce a compiler warning.
     ///
     /// @par Example

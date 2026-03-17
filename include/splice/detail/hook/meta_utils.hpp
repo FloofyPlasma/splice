@@ -103,6 +103,20 @@ namespace splice::detail
            && !std::meta::is_destructor(m) && !std::meta::is_operator_function(m) && has_hookable(m);
   }
 
+  /// @brief returns the number of hookable methods on @p t as a plain
+  /// `std::size_t` constant.
+  ///
+  /// @tparam t the class to inspect.
+  template<typename t>
+  consteval std::size_t hookable_method_count()
+  {
+    std::size_t n = 0;
+    for (auto m: std::meta::members_of(^^t, std::meta::access_context::unchecked()))
+      if (is_hookable_method(m))
+        n++;
+    return n;
+  }
+
   /// @brief Returns a `std::array` of reflected methods on @p T annotated with
   /// `[[= splice::hook::hookable{}]]`, in declaration order.
   ///
