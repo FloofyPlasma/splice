@@ -15,6 +15,7 @@ jobs:
         path:
           - 'include'
           - 'tests'
+          - 'examples'
 
     steps:
       - name: Checkout
