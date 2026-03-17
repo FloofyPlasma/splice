@@ -232,6 +232,8 @@ TEST_CASE("inject_all")
 
   REQUIRE(result.has_value());
 
+  reg->print_registry();
+
   DummyWorld world;
   DummyPlayer player;
   float ret = reg->dispatch<^^DummyWorld::calcDamage>(&world, &player, 20.0f);

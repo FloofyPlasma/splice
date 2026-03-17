@@ -160,10 +160,14 @@ namespace splice::detail
     }();
 
     std::array<std::meta::info, count> result { };
-    std::size_t i = 0;
-    for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-      if (is_injection_method(m))
-        result[i++] = m;
+
+    if constexpr (count > 0) {
+      std::size_t i = 0;
+      for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked())) {
+        if (is_injection_method(m))
+          result[i++] = m;
+      }
+    }
     return result;
   }
 

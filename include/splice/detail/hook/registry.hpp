@@ -225,9 +225,11 @@ namespace splice::hook
         constexpr auto annotations = std::meta::annotations_of_with_type(m, ^^splice::hook::injection);
         static_assert(annotations.size() == 1, "Annotation [[injection]] may only appear once on a method.");
         constexpr splice::hook::injection a = annotations[0];
-        auto ret = chain<a.what>().add(a.where, typename splice::detail::ChainFor<T, m>::type::Hook([:m:], a.priority));
-        if(!ret)
+        auto ret = chain<a.what>().add(a.where, typename splice::detail::ChainFor<T, a.what>::type::Hook([:m:]), a.priority);
+        if(!ret) {
+            SPLICE_ASSERT(false, "Adding to hook failed");
             return ret;
+        }
       }
       return { };
     }
