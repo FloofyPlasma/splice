@@ -4,14 +4,30 @@
 #include <meta>
 #include <tuple>
 
-namespace splice
+#include "splice/detail/hook/hook_chain.hpp"
+
+namespace splice::hook
 {
+
   /// @brief Marker type used to annotate methods that should be hookable.
   ///
-  /// Apply with `[[= hookable{}]]` on any non-special member function.
+  /// Apply with `[[= splice::hook::hookable{}]]` or the `SPLICE_HOOKABLE` macro
+  /// on any non-special member function.
+  ///
+  /// @par Example
+  /// @code
+  /// struct GameWorld {
+  ///     [[= splice::hook::hookable{}]] void mineBlock(int x, int y, int z);
+  /// };
+  /// @endcode
   struct hookable
   {
   };
+
+} // namespace splice::hook
+
+namespace splice::detail
+{
 
   /// @brief Returns the number of parameters of the reflected @p Method.
   template<std::meta::info Method>
@@ -45,10 +61,6 @@ namespace splice
   template<std::meta::info Method>
   using ParamTuple = decltype(param_tuple_impl<Method>(std::make_index_sequence<param_count<Method>()> { }));
 
-  /// @brief Forward declaration of `HookChain`. Defined in `hook_chain.hpp`.
-  template<typename Ret, typename... Args>
-  struct HookChain;
-
   /// @brief Constructs the `HookChain` type for a given @p Class, @p Method, and unpacked parameter tuple.
   ///
   /// @note Implementation helper, not intended for direct use. See `ChainFor`.
@@ -75,10 +87,14 @@ namespace splice
     using type = typename ChainBuilder<Class, Method, ParamTuple<Method>>::type;
   };
 
-  /// @brief Returns `true` if the reflected member @p m has a `[[= hookable{}]]` annotation.
-  consteval bool has_hookable(std::meta::info m) { return !std::meta::annotations_of_with_type(m, ^^hookable).empty(); }
+  /// @brief Returns `true` if the reflected member @p m has a `[[= splice::hook::hookable{}]]` annotation.
+  consteval bool has_hookable(std::meta::info m)
+  {
+    return !std::meta::annotations_of_with_type(m, ^^splice::hook::hookable).empty();
+  }
 
-  /// @brief Returns `true` if @p m is a non-special member function annotated with `[[= hookable{}]]`.
+  /// @brief Returns `true` if @p m is a non-special member function annotated with
+  /// `[[= splice::hook::hookable{}]]`.
   ///
   /// Excludes constructors, destructors, and operators.
   consteval bool is_hookable_method(std::meta::info m)
@@ -88,7 +104,7 @@ namespace splice
   }
 
   /// @brief Returns a `std::array` of reflected methods on @p T annotated with
-  /// `[[= hookable{}]]`, in declaration order.
+  /// `[[= splice::hook::hookable{}]]`, in declaration order.
   ///
   /// @tparam T The class to inspect.
   template<typename T>
@@ -124,4 +140,5 @@ namespace splice
   template<typename T>
   using ChainTuple = decltype(chain_tuple_impl<T, hookable_methods<T>()>(
       std::make_index_sequence<hookable_methods<T>().size()> { }));
-} // namespace splice
+
+} // namespace splice::detail

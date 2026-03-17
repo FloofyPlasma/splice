@@ -15,22 +15,14 @@
 class WeatherService
 {
 public:
-  [[= splice::hookable { }]] float getTemperature(std::string_view location)
-  {
-    // In production this would make a network call.
-    return 20.7f;
-  }
+  [[= splice::hook::hookable { }]] float getTemperature(std::string_view location) { return 20.7f; }
 
-  [[= splice::hookable { }]] bool isServiceAvailable()
-  {
-    // In production this would check a health endpoint.
-    return true;
-  }
+  [[= splice::hook::hookable { }]] bool isServiceAvailable() { return true; }
 };
 
 // A helper that consumes WeatherService through the registry.
 // In a real codebase this might be a UI component, a controller, etc.
-std::string formatWeatherReport(WeatherService *svc, std::shared_ptr<splice::ClassRegistry<WeatherService>> reg)
+std::string formatWeatherReport(WeatherService *svc, std::shared_ptr<splice::hook::ClassRegistry<WeatherService>> reg)
 {
   if (!reg->dispatch<^^WeatherService::isServiceAvailable>(svc))
     return "Service unavailable.";
@@ -43,12 +35,10 @@ void test_normal_conditions()
 {
   std::println("--- normal conditions ---");
 
-  // Isolated registry, hooks don't leak between tests.
-  auto reg = splice::ClassRegistry<WeatherService>::make_isolated();
+  auto reg = splice::hook::ClassRegistry<WeatherService>::make_isolated();
 
-  // Mock a specific temperature.
-  reg->inject<^^WeatherService::getTemperature, splice::InjectPoint::Head>(
-      [](splice::CallbackInfoReturnable<float> &ci, WeatherService *, std::string_view location)
+  reg->inject<^^WeatherService::getTemperature, splice::hook::InjectPoint::Head>(
+      [](splice::detail::CallbackInfoReturnable<float> &ci, WeatherService *, std::string_view location)
       {
         std::println("  [mock] getTemperature called for '{}'", location);
         ci.return_value = 23.5f;
@@ -65,11 +55,10 @@ void test_service_unavailable()
 {
   std::println("\n--- service unavailable ---");
 
-  auto reg = splice::ClassRegistry<WeatherService>::make_isolated();
+  auto reg = splice::hook::ClassRegistry<WeatherService>::make_isolated();
 
-  // Mock the service as unavailable.
-  reg->inject<^^WeatherService::isServiceAvailable, splice::InjectPoint::Head>(
-      [](splice::CallbackInfoReturnable<bool> &ci, WeatherService *)
+  reg->inject<^^WeatherService::isServiceAvailable, splice::hook::InjectPoint::Head>(
+      [](splice::detail::CallbackInfoReturnable<bool> &ci, WeatherService *)
       {
         std::println("  [mock] isServiceAvailable returning false");
         ci.return_value = false;
@@ -86,9 +75,8 @@ void test_modify_return()
 {
   std::println("\n--- modify_return rounding ---");
 
-  auto reg = splice::ClassRegistry<WeatherService>::make_isolated();
+  auto reg = splice::hook::ClassRegistry<WeatherService>::make_isolated();
 
-  // Use modify_return to round the temperature to the nearest integer.
   reg->modify_return<^^WeatherService::getTemperature>(
       [](float temp) -> float
       {

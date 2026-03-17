@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.30)
 
 foreach (example logging validation middleware testing)
     add_executable(splice_example_${example} ${example}.cpp)

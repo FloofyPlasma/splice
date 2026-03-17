@@ -10,7 +10,7 @@
 #include "splice/detail/priority.hpp"
 #include "splice/detail/result.hpp"
 
-namespace splice
+namespace splice::detail
 {
 
   /// @brief Passed to hooks on `void` methods. Supports cancellation.
@@ -48,7 +48,7 @@ namespace splice
   struct HookEntry
   {
     Fn fn;
-    int priority = Priority::Normal;
+    int priority = splice::hook::Priority::Normal;
   };
 
   /// @brief Holds the original function and all registered hooks for a single hookable method.
@@ -111,8 +111,9 @@ namespace splice
     /// @param point    The injection point to register the hook at.
     /// @param fn       The hook callable.
     /// @param priority Execution order relative to other hooks at the same point.
-    /// @returns `std::expected<void, MixinError>`.
-    std::expected<void, MixinError> add(InjectPoint point, Hook fn, int priority = Priority::Normal)
+    /// @returns `std::expected<void, splice::hook::HookError>`.
+    std::expected<void, splice::hook::HookError> add(
+        splice::hook::InjectPoint point, Hook fn, int priority = splice::hook::Priority::Normal)
     {
       auto &vec = hooks_for(point);
       auto it = std::lower_bound(
@@ -161,15 +162,15 @@ namespace splice
 
   private:
     /// @brief Returns the hook vector for the given inject @p point.
-    std::vector<HookEntry<Hook>> &hooks_for(InjectPoint point)
+    std::vector<HookEntry<Hook>> &hooks_for(splice::hook::InjectPoint point)
     {
       switch (point)
       {
-        case InjectPoint::Head:
+        case splice::hook::InjectPoint::Head:
           return head_hooks;
-        case InjectPoint::Tail:
+        case splice::hook::InjectPoint::Tail:
           return tail_hooks;
-        case InjectPoint::Return:
+        case splice::hook::InjectPoint::Return:
           return return_hooks;
       }
       std::unreachable();
@@ -196,4 +197,4 @@ namespace splice
     }
   };
 
-} // namespace splice
+} // namespace splice::detail

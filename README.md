@@ -1,7 +1,7 @@
 # splice
 
 A header-only C++26 hook and mixin library powered by static reflection.
-Splice lets you register before, after and return hooks on annotated class
+Splice lets you register before, after, and return hooks on annotated class
 methods at runtime, with zero overhead for unannotated code.
 
 Inspired by Java's Fabric Mixin system, but designed from the ground up for
@@ -26,7 +26,7 @@ modern C++.
 - GCC 16 or later
 - `-freflection` compiler flag
 - C++26 (`-std=c++26`)
-- CMake 3.25 or later (for consuming via CMake)
+- CMake 3.30 or later (for consuming via CMake)
 
 > **Note:** C++26 static reflection is currently only supported by GCC 16 with
 > the `-freflection` flag. Clang and MSVC support is not yet available.
@@ -39,11 +39,11 @@ modern C++.
 
 class GameWorld {
 public:
-    [[= splice::hookable{}]] void mineBlock(Player* player, int x, int y, int z) {
+    [[= splice::hook::hookable{}]] void mineBlock(Player* player, int x, int y, int z) {
         // original implementation
     }
 
-    [[= splice::hookable{}]] float calcDamage(Player* player, float amount) {
+    [[= splice::hook::hookable{}]] float calcDamage(Player* player, float amount) {
         return amount;
     }
 };
@@ -51,22 +51,22 @@ public:
 
 ### 2. Declare a registry header
 ```cpp
-// gameworld_hooks.h
+// gameworld_hooks.hpp
 #pragma once
 #include <splice/splice.hpp>
-#include "gameworld.h"
+#include "gameworld.hpp"
 
-SPLICE_REGISTRY(GameWorld, g_world);
+SPLICE_HOOK_REGISTRY(GameWorld, g_world);
 ```
 
 ### 3. Register hooks
 ```cpp
-#include "gameworld_hooks.h"
+#include "gameworld_hooks.hpp"
 
 void myModInit() {
     // Cancel bedrock mining
-    g_world->inject<^^GameWorld::mineBlock, splice::InjectPoint::Head>(
-        [](splice::CallbackInfo& ci, GameWorld*, Player* p,
+    g_world->inject<^^GameWorld::mineBlock, splice::hook::InjectPoint::Head>(
+        [](splice::detail::CallbackInfo& ci, GameWorld*, Player* p,
            int, int y, int) {
             if (y == 0) ci.cancelled = true;
         });
@@ -123,31 +123,31 @@ compiler.
 
 **Hook signatures:**
 ```cpp
-// Void method, CI has no return_value field
-void(splice::CallbackInfo& ci, T* self, Params...)
+// Void method
+void(splice::detail::CallbackInfo& ci, T* self, Params...)
 
-// Non-void method, CI carries the return value
-void(splice::CallbackInfoReturnable<Ret>& ci, T* self, Params...)
+// Non-void method
+void(splice::detail::CallbackInfoReturnable<Ret>& ci, T* self, Params...)
 ```
 
 **Inject points:**
 
 | Point | Runs | Can cancel | Has return value |
 |-------|------|------------|-----------------|
-| `Head` | Before original | Yes | No |
-| `Tail` | After original | No | No |
-| `Return` | At every return path | No | Yes |
+| `splice::hook::InjectPoint::Head`   | Before original | Yes | No  |
+| `splice::hook::InjectPoint::Tail`   | After original  | No  | No  |
+| `splice::hook::InjectPoint::Return` | At every return | No  | Yes |
 
-**Priority constants** (lower runs first):
+**Priority constants** (lower value runs first):
 ```cpp
-splice::Priority::Highest  // 0
-splice::Priority::High     // 250
-splice::Priority::Normal   // 500  (default)
-splice::Priority::Low      // 750
-splice::Priority::Lowest   // 1000
+splice::hook::Priority::Highest  // 0
+splice::hook::Priority::High     // 250
+splice::hook::Priority::Normal   // 500  (default)
+splice::hook::Priority::Low      // 750
+splice::hook::Priority::Lowest   // 1000
 ```
 
-Arithmetic is supported: `Priority::Normal + 1`.
+Arithmetic is supported: `splice::hook::Priority::Normal + 1`.
 
 ## Building Tests
 ```bash
@@ -157,26 +157,6 @@ cmake -B build -DSPLICE_BUILD_TESTS=ON
 cmake --build build
 ctest --test-dir build
 ```
-
-## Current Status
-
-**Working:**
-- Head, Tail, and Return inject points
-- CallbackInfo cancellation and return value override
-- Priority-ordered hook execution
-- `modify_arg` and `modify_return` focused hooks
-- Per-class shared registry with `weak_ptr` lifetime management
-- `SPLICE_REGISTRY` convenience macro
-
-**Limitations:**
-- Requires GCC 16 with `-freflection`, no other compiler support yet
-- No CI compilation until GCC 16 is available on GitHub Actions runners
-- C++26 reflection is still an evolving standard; the API may need to
-  adapt as the spec is finalised
-
-**Future Goals:**
-- Conflict detection and reporting
-- Broader compiler support as reflection standardises
 
 ## License
 

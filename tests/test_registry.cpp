@@ -10,19 +10,17 @@ struct DummyPlayer
 class DummyWorld
 {
 public:
-  [[= splice::hookable { }]] void onStep(DummyPlayer *player, int x, int z) { }
-
-  [[= splice::hookable { }]] float calcDamage(DummyPlayer *player, float amount) { return amount; }
-
-  [[= splice::hookable { }]] bool tryAction(DummyPlayer *player) { return true; }
+  [[= splice::hook::hookable { }]] void onStep(DummyPlayer *player, int x, int z) { }
+  [[= splice::hook::hookable { }]] float calcDamage(DummyPlayer *player, float amount) { return amount; }
+  [[= splice::hook::hookable { }]] bool tryAction(DummyPlayer *player) { return true; }
 
   void internalHelper() { }
 };
 
-SPLICE_REGISTRY(DummyWorld, g_dummy);
+SPLICE_HOOK_REGISTRY(DummyWorld, g_dummy);
 
 /// Returns a fresh isolated registry for each test, avoiding cross-test hook accumulation.
-static auto make_registry() { return splice::ClassRegistry<DummyWorld>::make_isolated(); }
+static auto make_registry() { return splice::hook::ClassRegistry<DummyWorld>::make_isolated(); }
 
 TEST_CASE("Head hook runs before original", "[registry][inject][head]")
 {
@@ -32,8 +30,8 @@ TEST_CASE("Head hook runs before original", "[registry][inject][head]")
   reg->chain<^^DummyWorld::onStep>().original
       = [&](DummyWorld *, DummyPlayer *, int, int) { order.push_back("original"); };
 
-  auto result = reg->inject<^^DummyWorld::onStep, splice::InjectPoint::Head>(
-      [&](splice::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back("head"); });
+  auto result = reg->inject<^^DummyWorld::onStep, splice::hook::InjectPoint::Head>(
+      [&](splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back("head"); });
 
   REQUIRE(result.has_value());
 
@@ -51,8 +49,8 @@ TEST_CASE("Head hook can cancel original", "[registry][inject][head]")
 
   reg->chain<^^DummyWorld::onStep>().original = [&](DummyWorld *, DummyPlayer *, int, int) { original_ran = true; };
 
-  auto result = reg->inject<^^DummyWorld::onStep, splice::InjectPoint::Head>(
-      [](splice::CallbackInfo &ci, DummyWorld *, DummyPlayer *, int, int) { ci.cancelled = true; });
+  auto result = reg->inject<^^DummyWorld::onStep, splice::hook::InjectPoint::Head>(
+      [](splice::detail::CallbackInfo &ci, DummyWorld *, DummyPlayer *, int, int) { ci.cancelled = true; });
 
   REQUIRE(result.has_value());
 
@@ -71,8 +69,8 @@ TEST_CASE("Tail hook runs after original", "[registry][inject][tail]")
   reg->chain<^^DummyWorld::onStep>().original
       = [&](DummyWorld *, DummyPlayer *, int, int) { order.push_back("original"); };
 
-  auto result = reg->inject<^^DummyWorld::onStep, splice::InjectPoint::Tail>(
-      [&](splice::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back("tail"); });
+  auto result = reg->inject<^^DummyWorld::onStep, splice::hook::InjectPoint::Tail>(
+      [&](splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back("tail"); });
 
   REQUIRE(result.has_value());
 
@@ -88,13 +86,13 @@ TEST_CASE("Tail hook does not run when cancelled", "[registry][inject][tail]")
   auto reg = make_registry();
   bool tail_ran = false;
 
-  auto head_result = reg->inject<^^DummyWorld::onStep, splice::InjectPoint::Head>(
-      [](splice::CallbackInfo &ci, DummyWorld *, DummyPlayer *, int, int) { ci.cancelled = true; });
+  auto head_result = reg->inject<^^DummyWorld::onStep, splice::hook::InjectPoint::Head>(
+      [](splice::detail::CallbackInfo &ci, DummyWorld *, DummyPlayer *, int, int) { ci.cancelled = true; });
 
   REQUIRE(head_result.has_value());
 
-  auto tail_result = reg->inject<^^DummyWorld::onStep, splice::InjectPoint::Tail>(
-      [&](splice::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { tail_ran = true; });
+  auto tail_result = reg->inject<^^DummyWorld::onStep, splice::hook::InjectPoint::Tail>(
+      [&](splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { tail_ran = true; });
 
   REQUIRE(tail_result.has_value());
 
@@ -110,8 +108,8 @@ TEST_CASE("Return hook can observe return value", "[registry][inject][return]")
   auto reg = make_registry();
   float observed = 0.0f;
 
-  auto result = reg->inject<^^DummyWorld::calcDamage, splice::InjectPoint::Return>(
-      [&](splice::CallbackInfoReturnable<float> &ci, DummyWorld *, DummyPlayer *, float)
+  auto result = reg->inject<^^DummyWorld::calcDamage, splice::hook::InjectPoint::Return>(
+      [&](splice::detail::CallbackInfoReturnable<float> &ci, DummyWorld *, DummyPlayer *, float)
       {
         if (ci.return_value)
           observed = *ci.return_value;
@@ -130,8 +128,9 @@ TEST_CASE("Return hook can override return value", "[registry][inject][return]")
 {
   auto reg = make_registry();
 
-  auto result = reg->inject<^^DummyWorld::calcDamage, splice::InjectPoint::Return>(
-      [](splice::CallbackInfoReturnable<float> &ci, DummyWorld *, DummyPlayer *, float) { ci.return_value = 99.0f; });
+  auto result = reg->inject<^^DummyWorld::calcDamage, splice::hook::InjectPoint::Return>(
+      [](splice::detail::CallbackInfoReturnable<float> &ci, DummyWorld *, DummyPlayer *, float)
+      { ci.return_value = 99.0f; });
 
   REQUIRE(result.has_value());
 
@@ -147,17 +146,17 @@ TEST_CASE("Head hooks run in priority order", "[registry][priority]")
   auto reg = make_registry();
   std::vector<int> order;
 
-  auto r1 = reg->inject<^^DummyWorld::onStep, splice::InjectPoint::Head>(
-      [&](splice::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back(2); },
-      splice::Priority::Normal);
+  auto r1 = reg->inject<^^DummyWorld::onStep, splice::hook::InjectPoint::Head>(
+      [&](splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back(2); },
+      splice::hook::Priority::Normal);
 
-  auto r2 = reg->inject<^^DummyWorld::onStep, splice::InjectPoint::Head>(
-      [&](splice::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back(1); },
-      splice::Priority::High);
+  auto r2 = reg->inject<^^DummyWorld::onStep, splice::hook::InjectPoint::Head>(
+      [&](splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back(1); },
+      splice::hook::Priority::High);
 
-  auto r3 = reg->inject<^^DummyWorld::onStep, splice::InjectPoint::Head>(
-      [&](splice::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back(3); },
-      splice::Priority::Low);
+  auto r3 = reg->inject<^^DummyWorld::onStep, splice::hook::InjectPoint::Head>(
+      [&](splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int) { order.push_back(3); },
+      splice::hook::Priority::Low);
 
   REQUIRE(r1.has_value());
   REQUIRE(r2.has_value());
@@ -201,10 +200,10 @@ TEST_CASE("modify_return rewrites the return value", "[registry][modify_return]"
   REQUIRE(ret == 20.0f);
 }
 
-TEST_CASE("SPLICE_REGISTRY shared instance is stable", "[registry][macro]")
+TEST_CASE("SPLICE_HOOK_REGISTRY shared instance is stable", "[registry][macro]")
 {
-  auto a = splice::ClassRegistry<DummyWorld>::shared();
-  auto b = splice::ClassRegistry<DummyWorld>::shared();
+  auto a = splice::hook::ClassRegistry<DummyWorld>::shared();
+  auto b = splice::hook::ClassRegistry<DummyWorld>::shared();
 
   REQUIRE(a.get() == b.get());
 }
@@ -212,7 +211,7 @@ TEST_CASE("SPLICE_REGISTRY shared instance is stable", "[registry][macro]")
 TEST_CASE("Isolated registry is independent of shared instance", "[registry][macro]")
 {
   auto isolated = make_registry();
-  auto shared = splice::ClassRegistry<DummyWorld>::shared();
+  auto shared = splice::hook::ClassRegistry<DummyWorld>::shared();
 
   REQUIRE(isolated.get() != shared.get());
 }
