@@ -219,6 +219,20 @@ namespace splice::hook
       return chain<Method>().add(InjectPoint::Return, typename Chain::Hook(std::move(wrapper)), priority);
     }
 
+    template<typename Source>
+    [[nodiscard]] std::expected<void, HookError> inject_all() {
+      template for (constexpr std::meta::info m : splice::detail::injection_methods<Source>()) {
+        constexpr auto annotations = std::meta::annotations_of_with_type(m, ^^splice::hook::injection);
+        static_assert(annotations.size() == 1, "Annotation [[injection]] may only appear once on a method.");
+        constexpr splice::hook::injection a = annotations[0];
+        auto ret = chain<a.what>().add(a.where, typename splice::detail::ChainFor<T, m>::type::Hook([:m:], a.priority));
+        if(!ret)
+            return ret;
+      }
+      return { };
+    }
+
+
     /// @brief Dispatches a call to @p Method through the full hook chain.
     ///
     /// The first argument must be a `T*` instance pointer, followed by the

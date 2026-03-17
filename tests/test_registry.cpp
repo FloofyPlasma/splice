@@ -215,3 +215,26 @@ TEST_CASE("Isolated registry is independent of shared instance", "[registry][mac
 
   REQUIRE(isolated.get() != shared.get());
 }
+
+class Test {
+    public:
+    [[= splice::hook::injection{ .what = ^^DummyWorld::calcDamage, .where = splice::hook::InjectPoint::Return }]]
+    void inject(splice::detail::CallbackInfoReturnable<float> &ci, DummyWorld *, DummyPlayer *, float) {
+        ci.return_value = 99.0f;
+    }
+};
+
+TEST_CASE("inject_all")
+{
+  auto reg = make_registry();
+
+  auto result = reg->inject_all<Test>();
+
+  REQUIRE(result.has_value());
+
+  DummyWorld world;
+  DummyPlayer player;
+  float ret = reg->dispatch<^^DummyWorld::calcDamage>(&world, &player, 20.0f);
+
+  REQUIRE(ret == 99.0f);
+}

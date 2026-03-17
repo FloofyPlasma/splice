@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <meta>
 #include <tuple>
 
@@ -22,6 +23,14 @@ namespace splice::hook
   /// @endcode
   struct hookable
   {
+  };
+
+  struct injection
+  {
+    std::meta::info what;
+    InjectPoint where;
+    std::size_t priority = Priority::Normal;
+    // std::size_t arg = -1; // for when I get modifying arguments separated
   };
 
 } // namespace splice::hook
@@ -123,6 +132,37 @@ namespace splice::detail
     std::size_t i = 0;
     for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
       if (is_hookable_method(m))
+        result[i++] = m;
+    return result;
+  }
+
+  consteval bool has_injection(std::meta::info m) {
+    return !std::meta::annotations_of_with_type(m, ^^splice::hook::injection).empty();
+  }
+
+  consteval bool is_injection_method(std::meta::info m)
+  {
+    return std::meta::is_function(m) && std::meta::has_identifier(m) && !std::meta::is_constructor(m)
+           && std::meta::is_static_member(m) && !std::meta::is_destructor(m)
+           && !std::meta::is_operator_function(m) && has_hookable(m);
+  }
+
+  template<typename T>
+  consteval auto injection_methods()
+  {
+    constexpr std::size_t count = []
+    {
+      std::size_t n = 0;
+      for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
+        if (is_injection_method(m))
+          n++;
+      return n;
+    }();
+
+    std::array<std::meta::info, count> result { };
+    std::size_t i = 0;
+    for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
+      if (is_injection_method(m))
         result[i++] = m;
     return result;
   }
