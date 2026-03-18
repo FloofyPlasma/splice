@@ -5,3 +5,4 @@
 #endif
 
 #include "splice/hook.hpp"
+#include "splice/wire.hpp"

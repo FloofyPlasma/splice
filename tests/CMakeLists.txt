@@ -7,6 +7,7 @@ include(Catch)
 add_executable(splice_tests
         test_registry.cpp
         test_priority.cpp
+        test_wire.cpp
 )
 
 target_link_libraries(splice_tests
