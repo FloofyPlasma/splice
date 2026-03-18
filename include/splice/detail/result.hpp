@@ -10,8 +10,8 @@ namespace splice::hook
   ///
   /// @par Example
   /// @code
-  /// auto result = reg->inject<^^GameWorld::mineBlock, splice::hook::InjectPoint::Head>(fn);
-  /// if (!result)
+  /// auto result = reg->inject<^^GameWorld::mineBlock,
+  /// splice::hook::InjectPoint::Head>(fn); if (!result)
   ///     // handle result.error()
   /// @endcode
   enum class HookError

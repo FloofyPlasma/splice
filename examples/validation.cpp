@@ -14,13 +14,13 @@ class BankAccount
 public:
   float balance = 1000.0f;
 
-  [[= splice::hook::hookable { }]] void withdraw(float amount)
+  [[= splice::hook::hookable {}]] void withdraw(float amount)
   {
     balance -= amount;
     std::println("  withdrew {:.2f}, balance is now {:.2f}", amount, balance);
   }
 
-  [[= splice::hook::hookable { }]] void transfer(std::string_view to, float amount)
+  [[= splice::hook::hookable {}]] void transfer(std::string_view to, float amount)
   {
     balance -= amount;
     std::println("  transferred {:.2f} to {}", amount, to);
@@ -37,7 +37,9 @@ void setupValidation()
       {
         if (amount <= 0.0f)
         {
-          std::println("[validation] rejected withdrawal — amount must be positive (got {:.2f})", amount);
+          std::println("[validation] rejected withdrawal — amount must be "
+                       "positive (got {:.2f})",
+              amount);
           ci.cancelled = true;
         }
       },

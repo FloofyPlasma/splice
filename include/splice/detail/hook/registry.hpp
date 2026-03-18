@@ -41,7 +41,8 @@ namespace splice::hook
   /// @code
   /// SPLICE_HOOK_REGISTRY(GameWorld, g_world);
   ///
-  /// g_world->inject<^^GameWorld::mineBlock, splice::hook::InjectPoint::Head>(fn);
+  /// g_world->inject<^^GameWorld::mineBlock,
+  /// splice::hook::InjectPoint::Head>(fn);
   /// g_world->dispatch<^^GameWorld::mineBlock>(&world, &steve, 10, 64, 5);
   /// @endcode
   template<typename T>
@@ -62,17 +63,19 @@ namespace splice::hook
     }
 
   public:
-    /// @brief Creates a fresh, isolated registry instance not shared with any other caller.
+    /// @brief Creates a fresh, isolated registry instance not shared with any
+    /// other caller.
     ///
-    /// @note Intended for unit testing only; prefer `shared()` in production code.
+    /// @note Intended for unit testing only; prefer `shared()` in production
+    /// code.
     /// @returns A `shared_ptr` to a newly constructed `ClassRegistry<T>`.
     static std::shared_ptr<ClassRegistry<T>> make_isolated()
     {
       return std::shared_ptr<ClassRegistry<T>>(new ClassRegistry<T>());
     }
 
-    /// @brief Returns the process-wide shared `ClassRegistry` for @p T, constructing
-    /// it on first call if no live instance exists.
+    /// @brief Returns the process-wide shared `ClassRegistry` for @p T,
+    /// constructing it on first call if no live instance exists.
     ///
     /// The registry is destroyed automatically when all `shared_ptr` handles go
     /// out of scope. Thread-safe.
@@ -97,7 +100,8 @@ namespace splice::hook
       return p;
     }
 
-    /// @brief Returns a reference to the `HookChain` for the reflected method @p Method.
+    /// @brief Returns a reference to the `HookChain` for the reflected method @p
+    /// Method.
     ///
     /// @tparam Method A reflection of a hookable member of @p T.
     template<std::meta::info Method>
@@ -115,9 +119,11 @@ namespace splice::hook
       return std::get<typename splice::detail::ChainFor<T, Method>::type>(m_chains);
     }
 
-    /// @brief Registers a hook on @p Method at the given @p Point with the given @p priority.
+    /// @brief Registers a hook on @p Method at the given @p Point with the given
+    /// @p priority.
     ///
-    /// Lower priority values run first; prefer the `splice::hook::Priority::` named constants.
+    /// Lower priority values run first; prefer the `splice::hook::Priority::`
+    /// named constants.
     ///
     /// The hook signature must be:
     /// @code
@@ -130,14 +136,16 @@ namespace splice::hook
     /// @tparam Point    The injection point (`Head`, `Tail`, or `Return`).
     /// @tparam Fn       The callable type of the hook.
     /// @param  fn       The hook to register.
-    /// @param  priority Execution order relative to other hooks at the same point.
+    /// @param  priority Execution order relative to other hooks at the same
+    /// point.
     /// @returns `std::expected<void, HookError>`. Always check the return value,
     ///          unhandled errors produce a compiler warning.
     ///
     /// @par Example
     /// @code
     /// g_world->inject<^^GameWorld::mineBlock, splice::hook::InjectPoint::Head>(
-    ///     [](splice::detail::CallbackInfo& ci, GameWorld*, Player* p, int, int y, int) {
+    ///     [](splice::detail::CallbackInfo& ci, GameWorld*, Player* p, int, int
+    ///     y, int) {
     ///         if (y == 0) ci.cancelled = true;
     ///     });
     /// @endcode
@@ -156,17 +164,19 @@ namespace splice::hook
       return result;
     }
 
-    /// @brief Registers a hook that rewrites a single argument of @p Method by index.
+    /// @brief Registers a hook that rewrites a single argument of @p Method by
+    /// index.
     ///
-    /// The hook receives the current value of the argument and returns the replacement.
-    /// Internally registers a `Head` hook.
+    /// The hook receives the current value of the argument and returns the
+    /// replacement. Internally registers a `Head` hook.
     ///
     /// @tparam Method   A reflection of a hookable member of @p T.
     /// @tparam ArgIndex Zero-based index into the method's declared parameters,
     ///                  not counting the leading `T*` instance pointer.
     /// @tparam Fn       A callable with signature `ArgT(ArgT)`.
     /// @param  fn       The rewrite function.
-    /// @param  priority Execution order relative to other hooks at the same point.
+    /// @param  priority Execution order relative to other hooks at the same
+    /// point.
     /// @returns `std::expected<void, HookError>`.
     ///
     /// @par Example
@@ -187,12 +197,14 @@ namespace splice::hook
     /// @brief Registers a hook that rewrites the return value of @p Method.
     ///
     /// The hook receives the current return value and returns the replacement.
-    /// Internally registers a `Return` hook. Only available on non-`void` methods.
+    /// Internally registers a `Return` hook. Only available on non-`void`
+    /// methods.
     ///
     /// @tparam Method A reflection of a non-void hookable member of @p T.
     /// @tparam Fn     A callable with signature `Ret(Ret)`.
     /// @param  fn     The rewrite function.
-    /// @param  priority Execution order relative to other hooks at the same point.
+    /// @param  priority Execution order relative to other hooks at the same
+    /// point.
     /// @returns `std::expected<void, HookError>`.
     ///
     /// @par Example
@@ -219,6 +231,34 @@ namespace splice::hook
       return chain<Method>().add(InjectPoint::Return, typename Chain::Hook(std::move(wrapper)), priority);
     }
 
+    /// @brief Registers the static functions annotated with `[[= injection{/* ...
+    /// */}]]` in @p Source as hooks based on the values present in the annotation
+    ///
+    /// @tparam Source The class containing the injections
+    /// @returns `std::expected<void, HookError>`.
+    template<typename Source>
+    [[nodiscard]] std::expected<void, HookError> inject_all()
+    {
+      template for (constexpr std::meta::info m: splice::detail::injection_methods<Source>())
+      {
+        template for (constexpr std::meta::info a_m: [:std::meta::reflect_constant_array(
+                                                           std::meta::annotations_of_with_type(
+                                                               m, ^^splice::hook::injection)):])
+        {
+          constexpr splice::hook::injection a = std::meta::extract<splice::hook::injection>(a_m);
+          if constexpr (std::meta::parent_of(a.what) == ^^T) // only try to register hooks for the registry's type
+          {
+            using Chain = splice::detail::ChainFor<T, a.what>::type;
+
+            auto ret = chain<a.what>().add(a.where, typename Chain::Hook([:m:]), a.priority);
+            if (!ret)
+              return ret;
+          }
+        }
+      }
+      return {};
+    }
+
     /// @brief Dispatches a call to @p Method through the full hook chain.
     ///
     /// The first argument must be a `T*` instance pointer, followed by the
@@ -226,7 +266,8 @@ namespace splice::hook
     ///
     /// @tparam Method       A reflection of a hookable member of @p T.
     /// @tparam DispatchArgs Argument types forwarded to the chain.
-    /// @param  args         The instance pointer followed by the method's parameters.
+    /// @param  args         The instance pointer followed by the method's
+    /// parameters.
     ///
     /// @par Example
     /// @code
@@ -241,7 +282,8 @@ namespace splice::hook
     /// @brief Prints a summary of all hookable methods and their registered hook
     /// counts to stdout.
     ///
-    /// Useful during development to verify that hooks are being registered as expected.
+    /// Useful during development to verify that hooks are being registered as
+    /// expected.
     ///
     /// @par Example output
     /// @code
@@ -260,13 +302,15 @@ namespace splice::hook
     }
 
   private:
-    /// @brief Constructs the original function wrapper for the reflected method @p m.
+    /// @brief Constructs the original function wrapper for the reflected method
+    /// @p m.
     ///
     /// The wrapper captures the instance pointer as the first argument, matching
     /// the `HookChain`'s expected signature.
     ///
     /// @tparam m      A reflection of a hookable member of @p T.
-    /// @tparam Params The method's parameter types, deduced from the tuple pointer.
+    /// @tparam Params The method's parameter types, deduced from the tuple
+    /// pointer.
     template<std::meta::info m, typename... Params>
     static auto make_original(std::tuple<Params...> *)
     {
@@ -313,8 +357,10 @@ namespace splice::hook
 /// #include "gameworld_hooks.hpp"
 ///
 /// void init() {
-///     g_world->inject<^^GameWorld::mineBlock, splice::hook::InjectPoint::Head>(
-///         [](splice::detail::CallbackInfo& ci, GameWorld*, Player* p, int, int y, int) {
+///     g_world->inject<^^GameWorld::mineBlock,
+///     splice::hook::InjectPoint::Head>(
+///         [](splice::detail::CallbackInfo& ci, GameWorld*, Player* p, int, int
+///         y, int) {
 ///             if (y == 0) ci.cancelled = true;
 ///         });
 /// }
@@ -326,3 +372,30 @@ namespace splice::hook
 /// Expands to `[[= splice::hook::hookable{}]]`.
 #define SPLICE_HOOKABLE                                                                                                \
   = splice::hook::hookable { }
+
+/// @brief Shorthand annotation for marking a method as an injection at
+/// `splice::hook::InjectPoint::Head` with the specified priority
+#define SPLICE_PRIO_INJECT_HEAD(clazz, prio)                                                                           \
+  = splice::hook::injection { .what = ^^clazz, .where = splice::hook::InjectPoint::Head, .priority = prio }
+
+/// @brief Shorthand annotation for marking a method as an injection at
+/// `splice::hook::InjectPoint::Head` with `Normal` priority
+#define SPLICE_INJECT_HEAD(clazz) SPLICE_PRIO_INJECT_HEAD(clazz, splice::hook::Priority::Normal)
+
+/// @brief Shorthand annotation for marking a method as an injection at
+/// `splice::hook::InjectPoint::Tail` with the specified priority
+#define SPLICE_PRIO_INJECT_TAIL(clazz, prio)                                                                           \
+  = splice::hook::injection { .what = ^^clazz, .where = splice::hook::InjectPoint::Tail, .priority = prio }
+
+/// @brief Shorthand annotation for marking a method as an injection at
+/// `splice::hook::InjectPoint::Tail` with `Normal` priority
+#define SPLICE_INJECT_TAIL(clazz) SPLICE_PRIO_INJECT_TAIL(clazz, splice::hook::Priority::Normal)
+
+/// @brief Shorthand annotation for marking a method as an injection at
+/// `splice::hook::InjectPoint::Return` with the specified priority
+#define SPLICE_PRIO_INJECT_RETURN(clazz, prio)                                                                         \
+  = splice::hook::injection { .what = ^^clazz, .where = splice::hook::InjectPoint::Return, .priority = prio }
+
+/// @brief Shorthand annotation for marking a method as an injection at
+/// `splice::hook::InjectPoint::Return` with `Normal` priority
+#define SPLICE_INJECT_RETURN(clazz) SPLICE_PRIO_INJECT_TAIL(clazz, splice::hook::Priority::Normal)

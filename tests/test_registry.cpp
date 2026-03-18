@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <splice/splice.hpp>
+#include <vector>
 
 struct DummyPlayer
 {
@@ -10,16 +11,17 @@ struct DummyPlayer
 class DummyWorld
 {
 public:
-  [[= splice::hook::hookable { }]] void onStep(DummyPlayer *player, int x, int z) { }
-  [[= splice::hook::hookable { }]] float calcDamage(DummyPlayer *player, float amount) { return amount; }
-  [[= splice::hook::hookable { }]] bool tryAction(DummyPlayer *player) { return true; }
+  [[= splice::hook::hookable {}]] void onStep(DummyPlayer *player, int x, int z) { }
+  [[= splice::hook::hookable {}]] float calcDamage(DummyPlayer *player, float amount) { return amount; }
+  [[= splice::hook::hookable {}]] bool tryAction(DummyPlayer *player) { return true; }
 
   void internalHelper() { }
 };
 
 SPLICE_HOOK_REGISTRY(DummyWorld, g_dummy);
 
-/// Returns a fresh isolated registry for each test, avoiding cross-test hook accumulation.
+/// Returns a fresh isolated registry for each test, avoiding cross-test hook
+/// accumulation.
 static auto make_registry() { return splice::hook::ClassRegistry<DummyWorld>::make_isolated(); }
 
 TEST_CASE("Head hook runs before original", "[registry][inject][head]")
@@ -214,4 +216,150 @@ TEST_CASE("Isolated registry is independent of shared instance", "[registry][mac
   auto shared = splice::hook::ClassRegistry<DummyWorld>::shared();
 
   REQUIRE(isolated.get() != shared.get());
+}
+
+class Test1
+{
+public:
+  static int val;
+
+  [[= splice::hook::injection {
+      .what = ^^DummyWorld::calcDamage, .where = splice::hook::InjectPoint::Return }]] static void
+  inject1(splice::detail::CallbackInfoReturnable<float> &ci, DummyWorld *, DummyPlayer *, float)
+  {
+    ci.return_value = 99.0f;
+  }
+
+  [[= splice::hook::injection {
+      .what = ^^DummyWorld::tryAction, .where = splice::hook::InjectPoint::Head }]] static void
+  inject2(splice::detail::CallbackInfoReturnable<bool> &, DummyWorld *, DummyPlayer *)
+  {
+    val = 2;
+  }
+
+  [[= splice::hook::injection { .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail }]] static void
+  inject3(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+  {
+    val = 4;
+  }
+};
+
+int Test1::val = 0;
+
+TEST_CASE("Ensure functions actually get injected", "[registry][class_inject]")
+{
+  auto reg = make_registry();
+
+  auto result = reg->inject_all<Test1>();
+
+  REQUIRE(result.has_value());
+
+  DummyWorld world;
+  DummyPlayer player;
+  float ret = reg->dispatch<^^DummyWorld::calcDamage>(&world, &player, 20.0f);
+  REQUIRE(ret == 99.0f);
+
+  reg->dispatch<^^DummyWorld::tryAction>(&world, &player);
+  REQUIRE(Test1::val == 2);
+
+  reg->dispatch<^^DummyWorld::onStep>(&world, &player, 0, 0);
+  REQUIRE(Test1::val == 4);
+}
+
+class Test2
+{
+public:
+  static std::vector<int> v;
+
+  [[= splice::hook::injection {
+      .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail, .priority = 0 }]] static void
+  early(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+  {
+    v.push_back(1);
+  }
+
+  [[= splice::hook::injection {
+      .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail, .priority = 1000 }]] static void
+  late(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+  {
+    v.push_back(2);
+  }
+};
+
+std::vector<int> Test2::v = std::vector<int> {};
+
+TEST_CASE("Ensure hooks respect priority", "[registry][class_inject]")
+{
+  auto reg = make_registry();
+  auto result = reg->inject_all<Test2>();
+
+  REQUIRE(result.has_value());
+
+  DummyWorld world;
+  DummyPlayer player;
+  reg->dispatch<^^DummyWorld::onStep>(&world, &player, 0, 0);
+
+  REQUIRE(Test2::v == std::vector<int> { 1, 2 });
+}
+
+class Test3
+{
+public:
+  static std::vector<int> v;
+
+  [[= splice::hook::injection { .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail }]] static void
+  early(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+  {
+    v.push_back(1);
+  }
+
+  [[= splice::hook::injection { .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail }]] static void
+  late(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+  {
+    v.push_back(2);
+  }
+};
+
+std::vector<int> Test3::v = std::vector<int> {};
+
+TEST_CASE("Hooks without priority are registered in reverse declaration order", "[registry][class_inject]")
+{
+  auto reg = make_registry();
+  auto result = reg->inject_all<Test3>();
+
+  REQUIRE(result.has_value());
+
+  DummyWorld world;
+  DummyPlayer player;
+  reg->dispatch<^^DummyWorld::onStep>(&world, &player, 0, 0);
+
+  REQUIRE(Test3::v == std::vector<int> { 2, 1 });
+}
+
+class DummyObject
+{
+public:
+  [[= splice::hook::hookable {}]] void f() { }
+};
+
+SPLICE_HOOK_REGISTRY(DummyObject, g_obj);
+
+class Test4
+{
+  [[= splice::hook::injection { .what = ^^DummyObject::f, .where = splice::hook::InjectPoint::Head }]] static void
+  inject(splice::detail::CallbackInfo &, DummyObject *)
+  {
+  }
+};
+
+TEST_CASE("Only register hooks for the specified class", "[registry][class_inject]")
+{
+  auto reg = make_registry();
+  auto result = reg->inject_all<Test4>();
+
+  REQUIRE(result.has_value());
+
+  result = g_obj->inject_all<Test4>();
+
+  REQUIRE(result.has_value());
 }

@@ -46,7 +46,8 @@ namespace splice::wire
     }
 
     /// @brief Invokes all disconnectors, removing this listener from every
-    /// connected signal. Safe to call if any emitters have already been destroyed.
+    /// connected signal. Safe to call if any emitters have already been
+    /// destroyed.
     ~ConnectionGuard() { disconnect_all(); }
 
     /// @brief Appends a type-erased disconnector for a single connection.
@@ -65,7 +66,8 @@ namespace splice::wire
 
     /// @brief Invokes all disconnectors and clears the list.
     ///
-    /// After this call the guard holds no connections. Safe to call multiple times.
+    /// After this call the guard holds no connections. Safe to call multiple
+    /// times.
     void disconnect_all()
     {
       std::vector<std::function<void()>> local;
@@ -113,7 +115,8 @@ namespace splice::wire
   /// };
   ///
   /// Logger logger;
-  /// splice::wire::connect_all(g_button, &logger); // guard populated automatically
+  /// splice::wire::connect_all(g_button, &logger); // guard populated
+  /// automatically
   /// // ~Logger disconnects from all signals
   /// @endcode
   class Connectable

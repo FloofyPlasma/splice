@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <meta>
 #include <tuple>
 
@@ -22,6 +23,34 @@ namespace splice::hook
   /// @endcode
   struct hookable
   {
+  };
+
+  /// @brief Annotation for marking a method as a hook to be registered by
+  /// `inject_all()`
+  ///
+  /// Apply with `[[= splice::hook::injection{/* ... */}]]` or with the
+  /// `SPLICE[_PRIO]_INJECT_*` macros on any non-special, static member function.
+  ///
+  /// @par Example
+  /// @code
+  /// class C {
+  ///     [[= splice::hook::injection{
+  ///         .what = ^^GameWorld::mineBlock,
+  ///         .where = splice::hook::InjectPoint::Head
+  ///     }]]
+  ///     void injectMine(splice::detail::CallbackInfo &, GameWorld *, int, int,
+  ///     int);
+  /// }
+  /// @endcode
+  struct injection
+  {
+    /// @brief The method to hook
+    std::meta::info what;
+    /// @brief What kind of hook this is
+    InjectPoint where;
+    /// @brief The priority of the hook
+    std::size_t priority = Priority::Normal;
+    // std::size_t arg = -1; // for when I get modifying arguments separated
   };
 
 } // namespace splice::hook
@@ -52,16 +81,18 @@ namespace splice::detail
   template<std::meta::info Method, std::size_t... Is>
   auto param_tuple_impl(std::index_sequence<Is...>) -> std::tuple<typename NthParam<Method, Is>::type...>;
 
-  /// @brief A `std::tuple` whose elements match the parameter types of @p Method, in declaration order.
+  /// @brief A `std::tuple` whose elements match the parameter types of @p Method,
+  /// in declaration order.
   ///
   /// @tparam Method A reflection of the method to inspect.
   ///
   /// @par Example
   /// For `void foo(int, float)`, `ParamTuple<^^foo>` is `std::tuple<int, float>`.
   template<std::meta::info Method>
-  using ParamTuple = decltype(param_tuple_impl<Method>(std::make_index_sequence<param_count<Method>()> { }));
+  using ParamTuple = decltype(param_tuple_impl<Method>(std::make_index_sequence<param_count<Method>()> {}));
 
-  /// @brief Constructs the `HookChain` type for a given @p Class, @p Method, and unpacked parameter tuple.
+  /// @brief Constructs the `HookChain` type for a given @p Class, @p Method, and
+  /// unpacked parameter tuple.
   ///
   /// @note Implementation helper, not intended for direct use. See `ChainFor`.
   template<typename Class, std::meta::info Method, typename ParamT>
@@ -74,10 +105,11 @@ namespace splice::detail
     using type = HookChain<Ret, Class *, Params...>;
   };
 
-  /// @brief Yields the `HookChain` type for a given @p Class and reflected @p Method.
+  /// @brief Yields the `HookChain` type for a given @p Class and reflected @p
+  /// Method.
   ///
-  /// The chain's signature is `HookChain<Ret, Class*, Params...>`, where `Ret` and
-  /// `Params...` are derived from the method's reflection info.
+  /// The chain's signature is `HookChain<Ret, Class*, Params...>`, where `Ret`
+  /// and `Params...` are derived from the method's reflection info.
   ///
   /// @tparam Class  The class that owns the method.
   /// @tparam Method A reflection of the method to build a chain for.
@@ -87,13 +119,15 @@ namespace splice::detail
     using type = typename ChainBuilder<Class, Method, ParamTuple<Method>>::type;
   };
 
-  /// @brief Returns `true` if the reflected member @p m has a `[[= splice::hook::hookable{}]]` annotation.
+  /// @brief Returns `true` if the reflected member @p m has a `[[=
+  /// splice::hook::hookable{}]]` annotation.
   consteval bool has_hookable(std::meta::info m)
   {
     return !std::meta::annotations_of_with_type(m, ^^splice::hook::hookable).empty();
   }
 
-  /// @brief Returns `true` if @p m is a non-special member function annotated with
+  /// @brief Returns `true` if @p m is a non-special member function annotated
+  /// with
   /// `[[= splice::hook::hookable{}]]`.
   ///
   /// Excludes constructors, destructors, and operators.
@@ -133,11 +167,60 @@ namespace splice::detail
       return n;
     }();
 
-    std::array<std::meta::info, count> result { };
+    std::array<std::meta::info, count> result {};
     std::size_t i = 0;
     for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
       if (is_hookable_method(m))
         result[i++] = m;
+    return result;
+  }
+
+  /// @brief Returns `true` if the reflected member @p m has a `[[=
+  /// splice::hook::injection{/* ... */}]]` annotation.
+  consteval bool has_injection(std::meta::info m)
+  {
+    return !std::meta::annotations_of_with_type(m, ^^splice::hook::injection).empty();
+  }
+
+  /// @brief Returns `true` if @p m is a non-special,static member function
+  /// annotated with
+  /// `[[= splice::hook::injection{/* ... */}]]`.
+  ///
+  /// Excludes constructors, destructors, and operators.
+  consteval bool is_injection_method(std::meta::info m)
+  {
+    return std::meta::is_function(m) && std::meta::has_identifier(m) && !std::meta::is_constructor(m)
+           && std::meta::is_static_member(m) && !std::meta::is_destructor(m) && !std::meta::is_operator_function(m)
+           && has_injection(m);
+  }
+
+  /// @brief Returns a `std::array` of reflected methods on @p T annotated with
+  /// `[[= splice::hook::injection{/* ... */}]]`, in declaration order.
+  ///
+  /// @tparam T The class to inspect.
+  template<typename T>
+  consteval auto injection_methods()
+  {
+    constexpr std::size_t count = []
+    {
+      std::size_t n = 0;
+      for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
+        if (is_injection_method(m))
+          n++;
+      return n;
+    }();
+
+    std::array<std::meta::info, count> result {};
+
+    if constexpr (count > 0)
+    {
+      std::size_t i = 0;
+      for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
+      {
+        if (is_injection_method(m))
+          result[i++] = m;
+      }
+    }
     return result;
   }
 
@@ -152,7 +235,7 @@ namespace splice::detail
   ///
   /// @tparam T The class whose hookable methods define the tuple's element types.
   template<typename T>
-  using ChainTuple = decltype(chain_tuple_impl<T, hookable_methods<T>()>(
-      std::make_index_sequence<hookable_methods<T>().size()> { }));
+  using ChainTuple
+      = decltype(chain_tuple_impl<T, hookable_methods<T>()>(std::make_index_sequence<hookable_methods<T>().size()> {}));
 
 } // namespace splice::detail

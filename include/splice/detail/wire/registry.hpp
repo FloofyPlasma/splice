@@ -16,7 +16,8 @@ namespace splice::wire
 {
 
   /// @brief Per-class signal registry. Holds a `HookChain` for every method on
-  /// @p T annotated with `[[SPLICE_WIRE_SIGNAL]]` or `[[SPLICE_WIRE_SIGNAL_ONCE]]`.
+  /// @p T annotated with `[[SPLICE_WIRE_SIGNAL]]` or
+  /// `[[SPLICE_WIRE_SIGNAL_ONCE]]`.
   ///
   /// Obtain the process-wide shared instance via `SignalRegistry<T>::shared()`.
   /// The registry is lazily constructed on first use and destroyed when all
@@ -67,7 +68,8 @@ namespace splice::wire
   public:
     /// @brief Creates a fresh isolated registry not shared with any other caller.
     ///
-    /// @note Intended for unit testing only; prefer `shared()` in production code.
+    /// @note Intended for unit testing only; prefer `shared()` in production
+    /// code.
     /// @returns A `shared_ptr` to a newly constructed `SignalRegistry<T>`.
     static std::shared_ptr<SignalRegistry<T>> make_isolated()
     {
@@ -158,7 +160,8 @@ namespace splice::wire
     /// @tparam SlotMethod A reflection of a slot method on @p Listener.
     /// @tparam Listener   A type inheriting from `splice::wire::Connectable`.
     /// @param  listener   Pointer to the listener instance.
-    /// @param  priority   Execution order (default: `splice::hook::Priority::Normal`).
+    /// @param  priority   Execution order (default:
+    /// `splice::hook::Priority::Normal`).
     template<std::meta::info Signal, std::meta::info SlotMethod, typename Listener>
     void connect(Listener *listener, int priority = splice::hook::Priority::Normal)
     {

@@ -13,9 +13,9 @@
 class PaymentProcessor
 {
 public:
-  [[= splice::hook::hookable { }]] bool processPayment(std::string_view account, float amount) { return amount > 0.0f; }
+  [[= splice::hook::hookable {}]] bool processPayment(std::string_view account, float amount) { return amount > 0.0f; }
 
-  [[= splice::hook::hookable { }]] void refund(std::string_view account, float amount) { }
+  [[= splice::hook::hookable {}]] void refund(std::string_view account, float amount) { }
 };
 
 SPLICE_HOOK_REGISTRY(PaymentProcessor, g_payments);
