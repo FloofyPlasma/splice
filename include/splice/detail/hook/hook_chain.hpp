@@ -130,13 +130,8 @@ namespace splice::detail
       auto &vec = hooks_for(point);
       auto it = std::lower_bound(
           vec.begin(), vec.end(), priority, [](const HookEntry<Hook> &e, int p) { return e.priority < p; });
-<<<<<<< HEAD
-      vec.insert(it, HookEntry<Hook> { std::move(fn), priority });
-      return { };
-=======
       vec.insert(it, HookEntry<Hook> { std::move(fn), priority, listener });
       return { };
->>>>>>> 0a739572482215358825169fa3b8e07551918517
     }
 
     /// @brief Dispatches a call through the full hook chain.
