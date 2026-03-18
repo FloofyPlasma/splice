@@ -15,9 +15,9 @@
 class WeatherService
 {
 public:
-  [[= splice::hook::hookable { }]] float getTemperature(std::string_view location) { return 20.7f; }
+  [[= splice::hook::hookable {}]] float getTemperature(std::string_view location) { return 20.7f; }
 
-  [[= splice::hook::hookable { }]] bool isServiceAvailable() { return true; }
+  [[= splice::hook::hookable {}]] bool isServiceAvailable() { return true; }
 };
 
 // A helper that consumes WeatherService through the registry.

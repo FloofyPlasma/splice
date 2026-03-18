@@ -16,7 +16,7 @@
 class AudioProcessor
 {
 public:
-  [[= splice::hook::hookable { }]] float processSample(float sample) { return sample; }
+  [[= splice::hook::hookable {}]] float processSample(float sample) { return sample; }
 };
 
 SPLICE_HOOK_REGISTRY(AudioProcessor, g_audio);
