@@ -132,10 +132,10 @@ namespace splice::detail
           vec.begin(), vec.end(), priority, [](const HookEntry<Hook> &e, int p) { return e.priority < p; });
 <<<<<<< HEAD
       vec.insert(it, HookEntry<Hook> { std::move(fn), priority });
-      return {};
+      return { };
 =======
       vec.insert(it, HookEntry<Hook> { std::move(fn), priority, listener });
-      return {};
+      return { };
 >>>>>>> 0a739572482215358825169fa3b8e07551918517
     }
 
@@ -148,7 +148,7 @@ namespace splice::detail
     /// @param args The instance pointer followed by the method's parameters.
     auto dispatch(Args... args)
     {
-      CI ci {};
+      CI ci { };
       auto arg_tuple = std::tuple<Args...>(std::move(args)...);
 
       for (auto &e: head_hooks)
@@ -200,7 +200,7 @@ namespace splice::detail
     auto early_return(CI &ci)
     {
       if constexpr (!std::is_void_v<Ret>)
-        return ci.return_value.value_or(Ret {});
+        return ci.return_value.value_or(Ret { });
     }
 
     /// @brief Returns the final value after all hooks have run.
@@ -210,7 +210,7 @@ namespace splice::detail
     auto final_return(CI &ci)
     {
       if constexpr (!std::is_void_v<Ret>)
-        return ci.return_value.value_or(Ret {});
+        return ci.return_value.value_or(Ret { });
     }
   };
 

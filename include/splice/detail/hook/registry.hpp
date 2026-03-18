@@ -256,7 +256,7 @@ namespace splice::hook
           }
         }
       }
-      return {};
+      return { };
     }
 
     /// @brief Dispatches a call to @p Method through the full hook chain.

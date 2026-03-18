@@ -11,9 +11,9 @@ struct DummyPlayer
 class DummyWorld
 {
 public:
-  [[= splice::hook::hookable {}]] void onStep(DummyPlayer *player, int x, int z) { }
-  [[= splice::hook::hookable {}]] float calcDamage(DummyPlayer *player, float amount) { return amount; }
-  [[= splice::hook::hookable {}]] bool tryAction(DummyPlayer *player) { return true; }
+  [[= splice::hook::hookable { }]] void onStep(DummyPlayer *player, int x, int z) { }
+  [[= splice::hook::hookable { }]] float calcDamage(DummyPlayer *player, float amount) { return amount; }
+  [[= splice::hook::hookable { }]] bool tryAction(DummyPlayer *player) { return true; }
 
   void internalHelper() { }
 };
@@ -225,20 +225,20 @@ public:
 
   [[= splice::hook::injection {
       .what = ^^DummyWorld::calcDamage, .where = splice::hook::InjectPoint::Return }]] static void
-  inject1(splice::detail::CallbackInfoReturnable<float> &ci, DummyWorld *, DummyPlayer *, float)
+      inject1(splice::detail::CallbackInfoReturnable<float> &ci, DummyWorld *, DummyPlayer *, float)
   {
     ci.return_value = 99.0f;
   }
 
-  [[= splice::hook::injection {
-      .what = ^^DummyWorld::tryAction, .where = splice::hook::InjectPoint::Head }]] static void
-  inject2(splice::detail::CallbackInfoReturnable<bool> &, DummyWorld *, DummyPlayer *)
+  [[= splice::hook::injection { .what = ^^DummyWorld::tryAction,
+      .where = splice::hook::InjectPoint::Head }]] static void inject2(splice::detail::CallbackInfoReturnable<bool> &,
+      DummyWorld *, DummyPlayer *)
   {
     val = 2;
   }
 
   [[= splice::hook::injection { .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail }]] static void
-  inject3(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+      inject3(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
   {
     val = 4;
   }
@@ -271,22 +271,22 @@ class Test2
 public:
   static std::vector<int> v;
 
-  [[= splice::hook::injection {
-      .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail, .priority = 0 }]] static void
-  early(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+  [[= splice::hook::injection { .what = ^^DummyWorld::onStep,
+      .where = splice::hook::InjectPoint::Tail,
+      .priority = 0 }]] static void early(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
   {
     v.push_back(1);
   }
 
-  [[= splice::hook::injection {
-      .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail, .priority = 1000 }]] static void
-  late(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+  [[= splice::hook::injection { .what = ^^DummyWorld::onStep,
+      .where = splice::hook::InjectPoint::Tail,
+      .priority = 1000 }]] static void late(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
   {
     v.push_back(2);
   }
 };
 
-std::vector<int> Test2::v = std::vector<int> {};
+std::vector<int> Test2::v = std::vector<int> { };
 
 TEST_CASE("Ensure hooks respect priority", "[registry][class_inject]")
 {
@@ -308,19 +308,19 @@ public:
   static std::vector<int> v;
 
   [[= splice::hook::injection { .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail }]] static void
-  early(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+      early(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
   {
     v.push_back(1);
   }
 
   [[= splice::hook::injection { .what = ^^DummyWorld::onStep, .where = splice::hook::InjectPoint::Tail }]] static void
-  late(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
+      late(splice::detail::CallbackInfo &, DummyWorld *, DummyPlayer *, int, int)
   {
     v.push_back(2);
   }
 };
 
-std::vector<int> Test3::v = std::vector<int> {};
+std::vector<int> Test3::v = std::vector<int> { };
 
 TEST_CASE("Hooks without priority are registered in reverse declaration order", "[registry][class_inject]")
 {
@@ -339,7 +339,7 @@ TEST_CASE("Hooks without priority are registered in reverse declaration order", 
 class DummyObject
 {
 public:
-  [[= splice::hook::hookable {}]] void f() { }
+  [[= splice::hook::hookable { }]] void f() { }
 };
 
 SPLICE_HOOK_REGISTRY(DummyObject, g_obj);
@@ -347,7 +347,7 @@ SPLICE_HOOK_REGISTRY(DummyObject, g_obj);
 class Test4
 {
   [[= splice::hook::injection { .what = ^^DummyObject::f, .where = splice::hook::InjectPoint::Head }]] static void
-  inject(splice::detail::CallbackInfo &, DummyObject *)
+      inject(splice::detail::CallbackInfo &, DummyObject *)
   {
   }
 };

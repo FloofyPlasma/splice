@@ -89,7 +89,7 @@ namespace splice::detail
   /// @par Example
   /// For `void foo(int, float)`, `ParamTuple<^^foo>` is `std::tuple<int, float>`.
   template<std::meta::info Method>
-  using ParamTuple = decltype(param_tuple_impl<Method>(std::make_index_sequence<param_count<Method>()> {}));
+  using ParamTuple = decltype(param_tuple_impl<Method>(std::make_index_sequence<param_count<Method>()> { }));
 
   /// @brief Constructs the `HookChain` type for a given @p Class, @p Method, and
   /// unpacked parameter tuple.
@@ -167,7 +167,7 @@ namespace splice::detail
       return n;
     }();
 
-    std::array<std::meta::info, count> result {};
+    std::array<std::meta::info, count> result { };
     std::size_t i = 0;
     for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
       if (is_hookable_method(m))
@@ -210,7 +210,7 @@ namespace splice::detail
       return n;
     }();
 
-    std::array<std::meta::info, count> result {};
+    std::array<std::meta::info, count> result { };
 
     if constexpr (count > 0)
     {
@@ -235,7 +235,7 @@ namespace splice::detail
   ///
   /// @tparam T The class whose hookable methods define the tuple's element types.
   template<typename T>
-  using ChainTuple
-      = decltype(chain_tuple_impl<T, hookable_methods<T>()>(std::make_index_sequence<hookable_methods<T>().size()> {}));
+  using ChainTuple = decltype(chain_tuple_impl<T, hookable_methods<T>()>(
+      std::make_index_sequence<hookable_methods<T>().size()> { }));
 
 } // namespace splice::detail
