@@ -128,7 +128,7 @@ namespace splice::detail
       return {};
 =======
       vec.insert(it, HookEntry<Hook> { std::move(fn), priority, listener });
-      return { };
+      return {};
 >>>>>>> 0a739572482215358825169fa3b8e07551918517
     }
 

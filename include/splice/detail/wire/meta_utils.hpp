@@ -68,7 +68,7 @@ namespace splice::detail::wire
       return n;
     }();
 
-    std::array<std::meta::info, count> result { };
+    std::array<std::meta::info, count> result {};
     std::size_t i = 0;
     for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
       if (is_signal_method(m))
@@ -92,7 +92,7 @@ namespace splice::detail::wire
       return n;
     }();
 
-    std::array<std::meta::info, count> result { };
+    std::array<std::meta::info, count> result {};
     std::size_t i = 0;
     for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
       if (is_slot_method(m))
@@ -149,11 +149,11 @@ namespace splice::detail::wire
   ///
   /// @tparam T The emitter class whose signal methods define the tuple's element types.
   template<typename T, auto Methods, std::size_t... Is>
-  auto signal_chain_tuple_impl(std::index_sequence<Is...>)
-      -> std::tuple<typename SignalChainFor<T, Methods[Is]>::type...>;
+  auto signal_chain_tuple_impl(
+      std::index_sequence<Is...>) -> std::tuple<typename SignalChainFor<T, Methods[Is]>::type...>;
 
   template<typename T>
   using SignalChainTuple = decltype(signal_chain_tuple_impl<T, signal_methods<T>()>(
-      std::make_index_sequence<signal_method_count<T>()> { }));
+      std::make_index_sequence<signal_method_count<T>()> {}));
 
 } // namespace splice::detail::wire
