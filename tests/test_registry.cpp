@@ -459,3 +459,32 @@ TEST_CASE("Instanced injections don't run after pointer is discarded", "[registr
 
   REQUIRE(Test7::v == 1);
 }
+
+class Test8
+{
+public:
+  static int v;
+  [[= splice::hook::injection { .what = ^^DummyWorld::onStep,
+      .where = splice::hook::InjectPoint::Head }]][[= splice::hook::injection { .what = ^^DummyWorld::onStep,
+      .where = splice::hook::InjectPoint::Head }]] static void inject(splice::detail::CallbackInfo &, DummyWorld *,
+      DummyPlayer *, int, int)
+  {
+    v++;
+  }
+};
+
+int Test8::v = 0;
+
+TEST_CASE("Repeat annotations function", "[registry][class_inject]")
+{
+  auto reg = make_registry();
+  auto result = reg->inject_all_static<Test8>();
+
+  REQUIRE(result.has_value());
+
+  DummyWorld world;
+  DummyPlayer player;
+  reg->dispatch<^^DummyWorld::onStep>(&world, &player, 0, 0);
+
+  REQUIRE(Test8::v == 2);
+}
