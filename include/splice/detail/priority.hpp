@@ -35,18 +35,18 @@ namespace splice::hook
   namespace Priority
   {
     /// @brief Runs before all other hooks.
-    constexpr int Highest = 0;
+    inline constexpr int Highest = 0;
 
     /// @brief Runs before `Normal` and `Low` hooks.
-    constexpr int High = 250;
+    inline constexpr int High = 250;
 
     /// @brief Default priority, used when no priority is specified.
-    constexpr int Normal = 500;
+    inline constexpr int Normal = 500;
 
     /// @brief Runs after `Normal` and `High` hooks.
-    constexpr int Low = 750;
+    inline constexpr int Low = 750;
 
     /// @brief Runs after all other hooks.
-    constexpr int Lowest = 1000;
+    inline constexpr int Lowest = 1000;
   } // namespace Priority
 } // namespace splice::hook

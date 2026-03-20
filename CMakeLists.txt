@@ -10,9 +10,21 @@ project(
 
 option(SPLICE_BUILD_TESTS "Build splice tests" OFF)
 option(SPLICE_BUILD_EXAMPLES "Build splice examples" OFF)
+option(SPLICE_BUILD_MODULE "Build splice as a C++ module" OFF)
 
-add_library(splice INTERFACE)
-add_library(splice::splice ALIAS splice)
+if (SPLICE_BUILD_MODULE)
+        add_library(splice)
+        add_library(splice::splice ALIAS splice)
+
+        target_sources(splice
+                PUBLIC
+                FILE_SET CXX_MODULES FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/splice/splice.cppm
+        )
+else()
+        add_library(splice INTERFACE)
+        add_library(splice::splice ALIAS splice)
+endif()
 
 target_compile_features(splice INTERFACE cxx_std_26)
 

@@ -19,7 +19,7 @@ modern C++.
 - **Per-class shared registry**: Hooks are shared across all instances of a
   class.
 - **Header-only**: Single include, no build step required for the library
-  itself.
+  itself. Provided as a module as well.
 
 ## Requirements
 
@@ -118,6 +118,9 @@ target_link_libraries(your_target PRIVATE splice::splice)
 Copy the `include/splice` directory into your project and add it to your
 include path. You must also pass `-freflection` and `-std=c++26` to your
 compiler.
+
+If using modules, enable `SPLICE_BUILD_MODULE` (pass `-DSPLICE_BUILD_MODULE=ON`)
+to CMake. This will create a module `splice`.
 
 ## API Overview
 
