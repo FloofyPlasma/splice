@@ -279,10 +279,10 @@ namespace splice::hook
               using Chain = splice::detail::ChainFor<T, a.what>::type;
               constexpr auto fn = unpackFunc<typename Chain::RetT, Source, splice::detail::ParamTuple<m>>(m);
               std::weak_ptr<Source> wp = ptr;
-              auto wrapper = [src = wp, &fn](Chain::CI &ci, auto &&...args) mutable
+              auto wrapper = [src = std::move(wp), &fn](Chain::CI &ci, auto &&...args) mutable
               {
-                if (!src.expired())
-                  (src.lock().get()->*fn)(ci, (args)...);
+                if (auto ptr = src.lock(); ptr)
+                  (ptr.get()->*fn)(ci, (args)...);
               };
 
               auto ret = chain<a.what>().add(a.where, typename Chain::Hook(wrapper), a.priority);
@@ -366,7 +366,7 @@ namespace splice::hook
     }
 
     template<typename Ret, typename Source, typename ArgTuple, std::size_t... Idxs>
-    consteval auto __unpackFuncImpl(std::meta::info m, std::index_sequence<Idxs...>)
+    consteval auto _unpackFuncImpl(std::meta::info m, std::index_sequence<Idxs...>)
     {
       return std::meta::extract<Ret (Source::*)(std::tuple_element_t<Idxs, ArgTuple>...)>(m);
     }
@@ -374,7 +374,7 @@ namespace splice::hook
     template<typename Ret, typename Source, typename ArgTuple>
     consteval auto unpackFunc(std::meta::info m)
     {
-      return __unpackFuncImpl<Ret, Source, ArgTuple>(m, std::make_index_sequence<std::tuple_size<ArgTuple>::value>());
+      return _unpackFuncImpl<Ret, Source, ArgTuple>(m, std::make_index_sequence<std::tuple_size<ArgTuple>::value>());
     }
   };
 
