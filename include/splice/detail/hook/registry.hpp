@@ -2,10 +2,10 @@
 
 #include <memory>
 #include <mutex>
-#include <print>
 #include <string>
 #include <utility>
 
+#include "splice/detail/assert.hpp"
 #include "splice/detail/hook/hook_chain.hpp"
 #include "splice/detail/hook/meta_utils.hpp"
 #include "splice/detail/priority.hpp"
@@ -13,21 +13,6 @@
 
 namespace splice::hook
 {
-
-#if defined(NDEBUG)
-#define SPLICE_ASSERT(cond, msg) ((void) 0)
-#else
-#define SPLICE_ASSERT(cond, msg)                                                                                       \
-  do                                                                                                                   \
-  {                                                                                                                    \
-    if (!(cond))                                                                                                       \
-    {                                                                                                                  \
-      std::println(stderr, "[splice::hook] assertion failed: {}", (msg));                                              \
-      std::abort();                                                                                                    \
-    }                                                                                                                  \
-  } while (0)
-#endif
-
   /// @brief Per-class hook registry. Holds a `HookChain` for every method on @p T
   /// annotated with `[[= splice::hook::hookable{}]]`.
   ///

@@ -6,6 +6,7 @@
 #include <tuple>
 
 #include "splice/detail/hook/hook_chain.hpp"
+#include "splice/detail/meta_core.hpp"
 
 namespace splice::hook
 {
@@ -122,13 +123,6 @@ namespace splice::detail
     using type = typename ChainBuilder<Class, Method, ParamTuple<Method>>::type;
   };
 
-  /// @brief Returns `true` if the reflected member @p m has a `[[=
-  /// splice::hook::hookable{}]]` annotation.
-  consteval bool has_hookable(std::meta::info m)
-  {
-    return !std::meta::annotations_of_with_type(m, ^^splice::hook::hookable).empty();
-  }
-
   /// @brief Returns `true` if @p m is a non-special member function annotated
   /// with
   /// `[[= splice::hook::hookable{}]]`.
@@ -136,22 +130,7 @@ namespace splice::detail
   /// Excludes constructors, destructors, and operators.
   consteval bool is_hookable_method(std::meta::info m)
   {
-    return std::meta::is_function(m) && std::meta::has_identifier(m) && !std::meta::is_constructor(m)
-           && !std::meta::is_destructor(m) && !std::meta::is_operator_function(m) && has_hookable(m);
-  }
-
-  /// @brief returns the number of hookable methods on @p t as a plain
-  /// `std::size_t` constant.
-  ///
-  /// @tparam t the class to inspect.
-  template<typename t>
-  consteval std::size_t hookable_method_count()
-  {
-    std::size_t n = 0;
-    for (auto m: std::meta::members_of(^^t, std::meta::access_context::unchecked()))
-      if (is_hookable_method(m))
-        n++;
-    return n;
+    return splice::detail::is_normal_function(m) && splice::detail::has_annotation<splice::hook::hookable>(m);
   }
 
   /// @brief Returns a `std::array` of reflected methods on @p T annotated with
@@ -161,28 +140,17 @@ namespace splice::detail
   template<typename T>
   consteval auto hookable_methods()
   {
-    constexpr std::size_t count = []
-    {
-      std::size_t n = 0;
-      for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-        if (is_hookable_method(m))
-          n++;
-      return n;
-    }();
-
-    std::array<std::meta::info, count> result { };
-    std::size_t i = 0;
-    for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-      if (is_hookable_method(m))
-        result[i++] = m;
-    return result;
+    return splice::detail::member_array<T, [](std::meta::info m) { return is_hookable_method(m); }>();
   }
 
-  /// @brief Returns `true` if the reflected member @p m has a `[[=
-  /// splice::hook::injection{/* ... */}]]` annotation.
-  consteval bool has_injection(std::meta::info m)
+  /// @brief returns the number of hookable methods on @p t as a plain
+  /// `std::size_t` constant.
+  ///
+  /// @tparam t the class to inspect.
+  template<typename T>
+  consteval std::size_t hookable_method_count()
   {
-    return !std::meta::annotations_of_with_type(m, ^^splice::hook::injection).empty();
+    return splice::detail::member_count<T, [](std::meta::info m) { return is_hookable_method(m); }>();
   }
 
   /// @brief Returns `true` if @p m is a non-special member function annotated with
@@ -191,8 +159,7 @@ namespace splice::detail
   /// Excludes constructors, destructors, and operators.
   consteval bool is_injection_method(std::meta::info m)
   {
-    return std::meta::is_function(m) && std::meta::has_identifier(m) && !std::meta::is_constructor(m)
-           && !std::meta::is_destructor(m) && !std::meta::is_operator_function(m) && has_injection(m);
+    return splice::detail::is_normal_function(m) && splice::detail::has_annotation<splice::hook::injection>(m);
   }
 
   /// @brief Returns a `std::array` of reflected methods on @p T annotated with
@@ -202,27 +169,7 @@ namespace splice::detail
   template<typename T>
   consteval auto injection_methods()
   {
-    constexpr std::size_t count = []
-    {
-      std::size_t n = 0;
-      for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-        if (is_injection_method(m))
-          n++;
-      return n;
-    }();
-
-    std::array<std::meta::info, count> result { };
-
-    if constexpr (count > 0)
-    {
-      std::size_t i = 0;
-      for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-      {
-        if (is_injection_method(m))
-          result[i++] = m;
-      }
-    }
-    return result;
+    return splice::detail::member_array<T, [](std::meta::info m) { return is_injection_method(m); }>();
   }
 
   /// @brief Deduces a tuple of `HookChain` types from an index sequence.

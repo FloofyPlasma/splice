@@ -5,41 +5,20 @@
 #include <tuple>
 
 #include "splice/detail/hook/meta_utils.hpp"
+#include "splice/detail/meta_core.hpp"
 #include "splice/detail/wire/annotations.hpp"
 
 namespace splice::detail::wire
 {
-
-  /// @brief Returns `true` if the reflected member @p m has a
-  /// `[[SPLICE_WIRE_SIGNAL]]` annotation.
-  consteval bool has_signal(std::meta::info m)
-  {
-    return !std::meta::annotations_of_with_type(m, ^^splice::wire::signal).empty();
-  }
-
-  /// @brief Returns `true` if the reflected member @p m has a
-  /// `[[SPLICE_WIRE_SIGNAL_ONCE]]` annotation.
-  consteval bool has_signal_once(std::meta::info m)
-  {
-    return !std::meta::annotations_of_with_type(m, ^^splice::wire::signal_once).empty();
-  }
-
-  /// @brief Returns `true` if the reflected member @p m has a
-  /// `[[SPLICE_WIRE_SLOT(...)]]` annotation.
-  consteval bool has_slot(std::meta::info m)
-  {
-    return !std::meta::annotations_of_with_type(m, ^^splice::wire::slot).empty();
-  }
-
   /// @brief Returns `true` if @p m is a non-special member function annotated
   /// with either `[[SPLICE_WIRE_SIGNAL]]` or `[[SPLICE_WIRE_SIGNAL_ONCE]]`.
   ///
   /// Excludes constructors, destructors, and operators.
   consteval bool is_signal_method(std::meta::info m)
   {
-    return std::meta::is_function(m) && std::meta::has_identifier(m) && !std::meta::is_constructor(m)
-           && !std::meta::is_destructor(m) && !std::meta::is_operator_function(m)
-           && (has_signal(m) || has_signal_once(m));
+    return splice::detail::is_normal_function(m)
+           && (splice::detail::has_annotation<splice::wire::signal>(m)
+               || splice::detail::has_annotation<splice::wire::signal_once>(m));
   }
 
   /// @brief Returns `true` if @p m is a non-special member function annotated
@@ -48,8 +27,7 @@ namespace splice::detail::wire
   /// Excludes constructors, destructors, and operators.
   consteval bool is_slot_method(std::meta::info m)
   {
-    return std::meta::is_function(m) && std::meta::has_identifier(m) && !std::meta::is_constructor(m)
-           && !std::meta::is_destructor(m) && !std::meta::is_operator_function(m) && has_slot(m);
+    return splice::detail::is_normal_function(m) && splice::detail::has_annotation<splice::wire::slot>(m);
   }
 
   /// @brief Returns a `std::array` of reflected signal methods on @p T,
@@ -59,21 +37,7 @@ namespace splice::detail::wire
   template<typename T>
   consteval auto signal_methods()
   {
-    constexpr std::size_t count = []
-    {
-      std::size_t n = 0;
-      for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-        if (is_signal_method(m))
-          n++;
-      return n;
-    }();
-
-    std::array<std::meta::info, count> result { };
-    std::size_t i = 0;
-    for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-      if (is_signal_method(m))
-        result[i++] = m;
-    return result;
+    return splice::detail::member_array<T, [](std::meta::info m) { return is_signal_method(m); }>();
   }
 
   /// @brief Returns a `std::array` of reflected slot methods on @p T,
@@ -83,21 +47,7 @@ namespace splice::detail::wire
   template<typename T>
   consteval auto slot_methods()
   {
-    constexpr std::size_t count = []
-    {
-      std::size_t n = 0;
-      for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-        if (is_slot_method(m))
-          n++;
-      return n;
-    }();
-
-    std::array<std::meta::info, count> result { };
-    std::size_t i = 0;
-    for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-      if (is_slot_method(m))
-        result[i++] = m;
-    return result;
+    return splice::detail::member_array<T, [](std::meta::info m) { return is_slot_method(m); }>();
   }
 
   /// @brief Yields the `HookChain` type for a given signal method @p Method
@@ -123,11 +73,7 @@ namespace splice::detail::wire
   template<typename T>
   consteval std::size_t signal_method_count()
   {
-    std::size_t n = 0;
-    for (auto m: std::meta::members_of(^^T, std::meta::access_context::unchecked()))
-      if (is_signal_method(m))
-        n++;
-    return n;
+    return splice::detail::member_count<T, [](std::meta::info m) { return is_signal_method(m); }>();
   }
 
   /// @brief Returns the index of @p Signal in the signal methods array of @p T.

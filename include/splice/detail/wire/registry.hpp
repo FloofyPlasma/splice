@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "splice/detail/hook/registry.hpp"
+#include "splice/detail/meta_core.hpp"
 #include "splice/detail/wire/annotations.hpp"
 #include "splice/detail/wire/connectable.hpp"
 #include "splice/detail/wire/meta_utils.hpp"
@@ -238,7 +239,7 @@ namespace splice::wire
     void emit(T *emitter, Args &&...args)
     {
       constexpr std::size_t idx = splice::detail::wire::signal_index_of<T, Signal>();
-      constexpr bool is_once = splice::detail::wire::has_signal_once(Signal);
+      constexpr bool is_once = splice::detail::has_annotation<splice::wire::signal_once>(Signal);
 
       // signal_once: check fired flag before taking any lock
       if constexpr (is_once)
@@ -315,7 +316,7 @@ namespace splice::wire
       template for (constexpr std::meta::info m: Methods)
       {
         constexpr std::size_t idx = splice::detail::wire::signal_index_of<T, m>();
-        constexpr bool is_once = splice::detail::wire::has_signal_once(m);
+        constexpr bool is_once = splice::detail::has_annotation<splice::wire::signal_once>(m);
         std::println("  [{:<20}]  slots: {}  once: {}  fired: {}", std::string(std::meta::identifier_of(m)),
             connection_count<m>(), is_once, is_once ? m_fired[idx].load() : false);
       }
