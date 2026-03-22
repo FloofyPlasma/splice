@@ -27,7 +27,7 @@ namespace splice::hook
   };
 
   /// @brief Annotation for marking a method as a hook to be registered by
-  /// `inject_all()`
+  /// `inject_all_X()`
   ///
   /// Apply with `[[= splice::hook::injection{/* ... */}]]` or with the
   /// `SPLICE[_PRIO]_INJECT_*` macros on any non-special member function.
@@ -54,7 +54,33 @@ namespace splice::hook
     InjectPoint where;
     /// @brief The priority of the hook
     std::size_t priority = Priority::Normal;
-    // std::size_t arg = -1; // for when I get modifying arguments separated
+  };
+
+  /// @brief Annotation for marking a method as a `modify_arg` hook to be registered by `inject_all_X()`
+  ///
+  /// Apply with `[[= splice::hook::modify_arg{/*...*/}]]` on any non-special member function
+  ///
+  /// Non-static injection methods are registered via `inject_all_instanced`
+  /// whereas static injection methods are registered via `inject_all_static`
+  ///
+  /// @par Example
+  /// @code
+  /// class C {
+  ///     [[= splice::hook::modify_arg{
+  ///         .what = ^^GameWorld::mineBlock,
+  ///         .arg = 1
+  ///     }]]
+  ///     int modifySecondInt(int);
+  /// }
+  /// @endcode
+  struct modify_arg
+  {
+    /// @brief The method to modify the argument of
+    std::meta::info what;
+    /// @brief the priority of the hook
+    std::size_t priority = Priority::Normal;
+    /// @brief The index of the argument to modify
+    std::size_t arg;
   };
 
 } // namespace splice::hook
@@ -154,16 +180,18 @@ namespace splice::detail
   }
 
   /// @brief Returns `true` if @p m is a non-special member function annotated with
-  /// `[[= splice::hook::injection{/* ... */}]]`.
+  /// `[[= splice::hook::injection{/* ... */}]]` or `[[= splice::hook::modify_arg{/*...*/}]]`.
   ///
   /// Excludes constructors, destructors, and operators.
   consteval bool is_injection_method(std::meta::info m)
   {
-    return splice::detail::is_normal_function(m) && splice::detail::has_annotation<splice::hook::injection>(m);
+    return splice::detail::is_normal_function(m)
+           && (splice::detail::has_annotation<splice::hook::injection>(m)
+               || splice::detail::has_annotation<splice::hook::modify_arg>(m));
   }
 
   /// @brief Returns a `std::array` of reflected methods on @p T annotated with
-  /// `[[= splice::hook::injection{/* ... */}]]`, in declaration order.
+  /// `[[= splice::hook::injection{/* ... */}]]` or `[[= splice::hook::modify_arg{/*...*/}]]`, in declaration order.
   ///
   /// @tparam T The class to inspect.
   template<typename T>

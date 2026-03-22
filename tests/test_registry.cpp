@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <memory>
 #include <splice/splice.hpp>
 #include <vector>
 
@@ -486,4 +487,54 @@ TEST_CASE("Repeat annotations function", "[registry][class_inject]")
   reg->dispatch<^^DummyWorld::onStep>(&world, &player, 0, 0);
 
   REQUIRE(Test8::v == 2);
+}
+
+class Test9
+{
+public:
+  [[= splice::hook::modify_arg { .what = ^^DummyWorld::calcDamage, .arg = 1 }]] static float modify(float f)
+  {
+    return f * 2.0f;
+  }
+};
+
+TEST_CASE("static modify_arg class injections function", "[registry][class_inject][static]")
+{
+  auto reg = make_registry();
+  auto result = reg->inject_all_static<Test9>();
+
+  REQUIRE(result.has_value());
+
+  DummyWorld world;
+  DummyPlayer player;
+  float res = reg->dispatch<^^DummyWorld::calcDamage>(&world, &player, 2.0);
+
+  REQUIRE(res == 4.0f);
+}
+
+class Test10
+{
+public:
+  float v = 0;
+  [[= splice::hook::modify_arg { .what = ^^DummyWorld::calcDamage, .arg = 1 }]] float modify(float f)
+  {
+    v = f;
+    return f * 3.0f;
+  }
+};
+
+TEST_CASE("instanced modify_arg class injections function", "[registry][class_inject][instanced]")
+{
+  auto reg = make_registry();
+  std::shared_ptr<Test10> ptr = std::make_shared<Test10>(0);
+  auto result = reg->inject_all_instanced(ptr);
+
+  REQUIRE(result.has_value());
+
+  DummyWorld world;
+  DummyPlayer player;
+  float res = reg->dispatch<^^DummyWorld::calcDamage>(&world, &player, 2.0);
+
+  REQUIRE(res == 6.0f);
+  REQUIRE(ptr->v == 2.0f);
 }
