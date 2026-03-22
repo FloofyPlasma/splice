@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.30)
 
 project(
         splice
-        VERSION 0.1.0
+        VERSION 0.2.0
         DESCRIPTION "A header-only C++26 reflection-based hook and mixin library"
         HOMEPAGE_URL "https://github.com/FloofyPlasma/splice"
         LANGUAGES CXX
