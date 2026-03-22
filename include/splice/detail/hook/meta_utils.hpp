@@ -54,7 +54,16 @@ namespace splice::hook
     InjectPoint where;
     /// @brief The priority of the hook
     std::size_t priority = Priority::Normal;
-    // std::size_t arg = -1; // for when I get modifying arguments separated
+  };
+
+  struct modify_arg
+  {
+    /// @brief The method to modify the argument of
+    std::meta::info what;
+    /// @brief the priority of the hook
+    std::size_t priority = Priority::Normal;
+    /// @brief The index of the argument to modify
+    std::size_t arg;
   };
 
 } // namespace splice::hook
@@ -159,7 +168,9 @@ namespace splice::detail
   /// Excludes constructors, destructors, and operators.
   consteval bool is_injection_method(std::meta::info m)
   {
-    return splice::detail::is_normal_function(m) && splice::detail::has_annotation<splice::hook::injection>(m);
+    return splice::detail::is_normal_function(m)
+           && (splice::detail::has_annotation<splice::hook::injection>(m)
+               || splice::detail::has_annotation<splice::hook::modify_arg>(m));
   }
 
   /// @brief Returns a `std::array` of reflected methods on @p T annotated with

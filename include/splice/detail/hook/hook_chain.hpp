@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <expected>
 #include <functional>
+#include <iostream>
 #include <optional>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -83,6 +85,9 @@ namespace splice::detail
     /// @brief The return type of the original function.
     using RetT = Ret;
 
+    /// @brief Tuple of argument types
+    using ArgHookTuple = std::tuple<std::function<Args(Args)>...>;
+
     /// @brief Hook function type, receives `CI` by reference followed by all
     /// original method arguments.
     using Hook = std::function<void(CI &, Args &...)>;
@@ -91,6 +96,8 @@ namespace splice::detail
     ///
     /// Can be replaced to wrap or override the original behaviour entirely.
     Fn original;
+
+    std::tuple<std::vector<HookEntry<std::function<Args(Args)>>>...> arg_hooks;
 
     /// @brief Hooks registered at `InjectPoint::Head`, sorted ascending by
     /// priority on insertion.
@@ -134,6 +141,18 @@ namespace splice::detail
       return { };
     }
 
+    template<std::size_t idx>
+    std::expected<void, splice::hook::HookError> add_modify_arg(std::tuple_element_t<idx, ArgHookTuple> fn,
+        int priority = splice::hook::Priority::Normal, void *listener = nullptr)
+    {
+      // adding 1 to skip the `this` pointer
+      auto &vec = std::get<idx>(arg_hooks);
+      auto it = std::lower_bound(vec.begin(), vec.end(), priority,
+          [](const HookEntry<std::tuple_element_t<idx, ArgHookTuple>> &e, int p) { return e.priority < p; });
+      vec.insert(it, HookEntry<std::tuple_element_t<idx, ArgHookTuple>> { std::move(fn), priority, listener });
+      return { };
+    }
+
     /// @brief Dispatches a call through the full hook chain.
     ///
     /// For `void` methods the return type is `void`. For non-`void` methods
@@ -145,6 +164,8 @@ namespace splice::detail
     {
       CI ci { };
       auto arg_tuple = std::tuple<Args...>(std::move(args)...);
+
+      run_arg_hooks(arg_tuple, std::make_index_sequence<sizeof...(Args)>());
 
       for (auto &e: head_hooks)
       {
@@ -173,6 +194,21 @@ namespace splice::detail
     }
 
   private:
+    template<std::size_t... Idxs>
+    void run_arg_hooks(std::tuple<Args...> &arg_tuple, std::index_sequence<Idxs...>)
+    {
+      template for (constexpr std::size_t i: { Idxs... })
+      {
+        auto &vec = std::get<i>(arg_hooks);
+        for (auto &e: vec)
+        {
+          std::cout << std::get<i>(arg_tuple) << std::endl;
+          std::get<i>(arg_tuple) = std::invoke([&e](auto a) { return e.fn(a); }, std::get<i>(arg_tuple));
+          std::cout << std::get<i>(arg_tuple) << std::endl;
+        }
+      }
+    }
+
     /// @brief Returns the hook vector for the given inject @p point.
     std::vector<HookEntry<Hook>> &hooks_for(splice::hook::InjectPoint point)
     {

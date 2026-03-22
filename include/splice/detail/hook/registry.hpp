@@ -176,7 +176,8 @@ namespace splice::hook
 
       static_assert(ArgIndex < std::tuple_size_v<Params>, "modify_arg: ArgIndex is out of range for this method.");
 
-      return modify_arg_impl<Method, ArgIndex>(std::forward<Fn>(fn), priority, static_cast<Params *>(nullptr));
+      // add 1 to skip `this` pointer from dispatch
+      return chain<Method>().template add_modify_arg<ArgIndex + 1>(fn, priority);
     }
 
     /// @brief Registers a hook that rewrites the return value of @p Method.
@@ -229,17 +230,29 @@ namespace splice::hook
         if constexpr (std::meta::is_static_member(m))
         {
           template for (constexpr std::meta::info a_m: [:std::meta::reflect_constant_array(
-                                                             std::meta::annotations_of_with_type(
-                                                                 m, ^^splice::hook::injection)):])
+                                                             std::meta::annotations_of(m)):])
           {
-            constexpr splice::hook::injection a = std::meta::extract<splice::hook::injection>(a_m);
-            if constexpr (std::meta::parent_of(a.what) == ^^T) // only try to register hooks for the registry's type
+            if constexpr (std::meta::type_of(a_m) == ^^const splice::hook::injection)
             {
-              using Chain = splice::detail::ChainFor<T, a.what>::type;
+              constexpr splice::hook::injection a = std::meta::extract<splice::hook::injection>(a_m);
+              if constexpr (std::meta::parent_of(a.what) == ^^T) // only try to register hooks for the registry's type
+              {
+                using Chain = splice::detail::ChainFor<T, a.what>::type;
 
-              auto ret = chain<a.what>().add(a.where, typename Chain::Hook([:m:]), a.priority);
-              if (!ret)
-                return ret;
+                auto ret = chain<a.what>().add(a.where, typename Chain::Hook([:m:]), a.priority);
+                if (!ret)
+                  return ret;
+              }
+            }
+            if constexpr (std::meta::type_of(a_m) == ^^const splice::hook::modify_arg)
+            {
+              constexpr splice::hook::modify_arg a = std::meta::extract<splice::hook::modify_arg>(a_m);
+              if constexpr (std::meta::parent_of(a.what) == ^^T)
+              {
+                auto ret = chain<a.what>().template add_modify_arg<a.arg + 1>([:m:], a.priority);
+                if (!ret)
+                  return ret;
+              }
             }
           }
         }
@@ -255,24 +268,46 @@ namespace splice::hook
         if constexpr (!std::meta::is_static_member(m))
         {
           template for (constexpr std::meta::info a_m: [:std::meta::reflect_constant_array(
-                                                             std::meta::annotations_of_with_type(
-                                                                 m, ^^splice::hook::injection)):])
+                                                             std::meta::annotations_of(m)):])
           {
-            constexpr splice::hook::injection a = std::meta::extract<splice::hook::injection>(a_m);
-            if constexpr (std::meta::parent_of(a.what) == ^^T) // only try to register hooks for the registry's type
+            if constexpr (std::meta::type_of(a_m) == ^^const splice::hook::injection)
             {
-              using Chain = splice::detail::ChainFor<T, a.what>::type;
-              constexpr auto fn = unpackFunc<typename Chain::RetT, Source, splice::detail::ParamTuple<m>>(m);
-              std::weak_ptr<Source> wp = ptr;
-              auto wrapper = [src = std::move(wp), &fn](Chain::CI &ci, auto &&...args) mutable
+              constexpr splice::hook::injection a = std::meta::extract<splice::hook::injection>(a_m);
+              if constexpr (std::meta::parent_of(a.what) == ^^T) // only try to register hooks for the registry's type
               {
-                if (auto ptr = src.lock(); ptr)
-                  (ptr.get()->*fn)(ci, (args)...);
-              };
+                using Chain = splice::detail::ChainFor<T, a.what>::type;
+                constexpr auto fn = unpackFunc<typename Chain::RetT, Source, splice::detail::ParamTuple<m>>(m);
+                std::weak_ptr<Source> wp = ptr;
+                auto wrapper = [src = std::move(wp), &fn](Chain::CI &ci, auto &&...args) mutable
+                {
+                  if (auto ptr = src.lock(); ptr)
+                    (ptr.get()->*fn)(ci, (args)...);
+                };
 
-              auto ret = chain<a.what>().add(a.where, typename Chain::Hook(wrapper), a.priority);
-              if (!ret)
-                return ret;
+                auto ret = chain<a.what>().add(a.where, typename Chain::Hook(wrapper), a.priority);
+                if (!ret)
+                  return ret;
+              }
+            }
+            if constexpr (std::meta::type_of(a_m) == ^^const splice::hook::modify_arg)
+            {
+              constexpr splice::hook::modify_arg a = std::meta::extract<splice::hook::modify_arg>(a_m);
+              if constexpr (std::meta::parent_of(a.what) == ^^T)
+              {
+                using Params = splice::detail::ParamTuple<a.what>;
+                constexpr auto fn = _unpackFuncImpl<std::tuple_element_t<a.arg, Params>, Source, Params>(
+                    m, std::index_sequence<a.arg> { });
+                std::weak_ptr<Source> wp = ptr;
+                auto wrapper = [src = std::move(wp), &fn](auto arg) mutable
+                {
+                  if (auto ptr = src.lock(); ptr)
+                    return (ptr.get()->*fn)(arg);
+                  return arg;
+                };
+                auto ret = chain<a.what>().template add_modify_arg<a.arg + 1>(wrapper, a.priority);
+                if (!ret)
+                  return ret;
+              }
             }
           }
         }
@@ -337,17 +372,6 @@ namespace splice::hook
     {
       using Fn = typename splice::detail::ChainFor<T, m>::type::Fn;
       return Fn { [](T *self, Params... args) { return (self->[:m:])(args...); } };
-    }
-
-    template<std::meta::info Method, size_t ArgIndex, typename Fn, typename... Params>
-    std::expected<void, HookError> modify_arg_impl(Fn &&fn, int priority, std::tuple<Params...> *)
-    {
-      using Chain = typename splice::detail::ChainFor<T, Method>::type;
-
-      auto wrapper = [f = std::forward<Fn>(fn)](typename Chain::CI &, T *, Params &...args) mutable
-      { std::get<ArgIndex>(std::tie(args...)) = f(std::get<ArgIndex>(std::tie(args...))); };
-
-      return chain<Method>().add(InjectPoint::Head, typename Chain::Hook(std::move(wrapper)), priority);
     }
 
     template<typename Ret, typename Source, typename ArgTuple, std::size_t... Idxs>
