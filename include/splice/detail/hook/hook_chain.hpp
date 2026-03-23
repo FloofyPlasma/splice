@@ -200,9 +200,7 @@ namespace splice::detail
         auto &vec = std::get<i>(arg_hooks);
         for (auto &e: vec)
         {
-          std::cout << std::get<i>(arg_tuple) << std::endl;
           std::get<i>(arg_tuple) = std::invoke([&e](auto a) { return e.fn(a); }, std::get<i>(arg_tuple));
-          std::cout << std::get<i>(arg_tuple) << std::endl;
         }
       }
     }
