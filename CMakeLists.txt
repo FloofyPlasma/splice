@@ -82,3 +82,7 @@ install(
         ${CMAKE_CURRENT_BINARY_DIR}/spliceConfigVersion.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/splice
 )
+
+
+find_package(nlohmann_json REQUIRED)
+target_link_libraries(splice INTERFACE nlohmann_json::nlohmann_json)
