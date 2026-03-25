@@ -5,6 +5,8 @@
 
 namespace splice::flux
 {
+  /// @brief Forward declaration of splice::flux::encode_intermediary
+  /// @see [codec.hpp](./codec.hpp)
   template<typename SerializationTarget, typename ObjectType>
   SerializationTarget::IntermediaryType encode_intermediary(ObjectType object);
 
@@ -14,6 +16,6 @@ namespace splice::flux
   /// @code
   /// splice::flux::MapObject<splice::flux::JSON>
   /// @endcode
-  template <typename SerializationTarget>
+  template<typename SerializationTarget>
   using MapObject = std::map<std::string, typename SerializationTarget::IntermediaryType>;
 };

@@ -29,7 +29,8 @@ namespace splice::flux
   {
   };
 
-  namespace detail {
+  namespace detail
+  {
     /// @brief Checks that a specific type has a serializer specialization that is well-defined
     ///
     /// @par Example
