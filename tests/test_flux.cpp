@@ -43,7 +43,7 @@ TEST_CASE("explicit serialized fields", "[flux][explicit]")
   std::string result = splice::flux::encode<splice::flux::JSON>(object);
 
   // TODO: Add rename support
-  REQUIRE(result == R"({"armor":50.0,"health":100.0})");
+  REQUIRE(result == R"({"armor":50.0,"hp":100.0})");
 }
 
 TEST_CASE("full automatic field serialization", "[flux][fullauto]")
@@ -59,5 +59,5 @@ TEST_CASE("mixed field serialization", "[flux][mixed]")
   Mixed object;
   std::string result = splice::flux::encode<splice::flux::JSON>(object);
 
-  REQUIRE(result == R"({"ammo":0.0,"health":0.0,"position":0.0})");
+  REQUIRE(result == R"({"ammo":0.0,"hp":0.0,"position":0.0})");
 }

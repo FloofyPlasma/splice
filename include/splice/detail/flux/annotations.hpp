@@ -1,5 +1,28 @@
 #pragma once
 
+// TODO: Move this into a common splice aspect
+namespace splice::detail
+{
+  struct fixed_string
+  {
+    const char *__inner;
+
+    template<typename StringType>
+    consteval fixed_string(StringType &some_str)
+    {
+      this->__inner = std::define_static_string(some_str);
+    }
+
+    consteval fixed_string(decltype(nullptr)) { this->__inner = nullptr; }
+
+    operator const char *() { return this->__inner; }
+
+    operator bool() { return this->__inner; }
+    bool operator ==(decltype(nullptr)) { return this->__inner == nullptr; }
+    bool operator !=(decltype(nullptr)) { return this->__inner != nullptr; }
+  };
+};
+
 namespace splice::flux
 {
 
@@ -28,7 +51,7 @@ namespace splice::flux
   /// field
   struct field
   {
-    const char *name = nullptr;
+    detail::fixed_string name = nullptr;
     bool replicate = false;
     bool config = false;
     Ownership ownership = Ownership::Own;
