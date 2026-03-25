@@ -5,3 +5,4 @@
 #endif
 
 #include "splice/detail/flux/codec.hpp"
+#include "splice/detail/flux/json_target.hpp"
