@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef SPLICE_FLUX_ENABLE_JSON
+
 #include <map>
 
 #include <nlohmann/detail/conversions/to_json.hpp>
@@ -53,3 +55,5 @@ namespace splice::flux
     }
   };
 };
+
+#endif // SPLICE_FLUX_ENABLE_JSON

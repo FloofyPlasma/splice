@@ -4,6 +4,11 @@ find_package(Catch2 3 REQUIRED)
 
 include(Catch)
 
+# JSON is required for tests
+if (NOT SPLICE_FLUX_ENABLE_JSON)
+        message(FATAL_ERROR "Splice tests depend on JSON. SPLICE_FLUX_ENABLE_JSON must also be set to ON")
+endif ()
+
 add_executable(splice_tests
         test_registry.cpp
         test_priority.cpp
