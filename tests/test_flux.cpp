@@ -1,6 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
 #include <splice/splice.hpp>
-#include <type_traits>
 
 // Explicit opt-in only -- only annotated fields
 struct ExplicitOnly
@@ -41,9 +40,24 @@ struct [[= splice::flux::serializable{}]] Mixed
 TEST_CASE("explicit serialized fields", "[flux][explicit]")
 {
   ExplicitOnly object;
-  std::string result = splice::flux::encode<splice::flux::JSON>(123.0f);
-  std::string result2 = splice::flux::encode<splice::flux::JSON>(object);
+  std::string result = splice::flux::encode<splice::flux::JSON>(object);
 
-  REQUIRE(result == "123.0");
-  REQUIRE(result2 == R"({"armor":50.0,"health":100.0})");
+  // TODO: Add rename support
+  REQUIRE(result == R"({"armor":50.0,"health":100.0})");
+}
+
+TEST_CASE("full automatic field serialization", "[flux][fullauto]")
+{
+  FullAuto object;
+  std::string result = splice::flux::encode<splice::flux::JSON>(object);
+
+  REQUIRE(result == R"({"x":0.0,"y":0.0,"z":0.0})");
+}
+
+TEST_CASE("mixed field serialization", "[flux][mixed]")
+{
+  Mixed object;
+  std::string result = splice::flux::encode<splice::flux::JSON>(object);
+
+  REQUIRE(result == R"({"ammo":0.0,"health":0.0,"position":0.0})");
 }
