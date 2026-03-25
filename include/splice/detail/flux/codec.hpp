@@ -28,24 +28,27 @@ namespace splice::flux
   struct serializer
   {
   };
+}
 
-  namespace detail
-  {
-    /// @brief Checks that a specific type has a serializer specialization that is well-defined
-    ///
-    /// @par Example
-    /// @code
-    /// has_serializer<JSON, float>
-    /// @endcode
-    template<typename SerializationTarget, typename ObjectType>
-    concept has_serializer = requires(ObjectType o, SerializationTarget::IntermediaryType ir) {
-      {
-        serializer<SerializationTarget, ObjectType>::encode(o)
-      } -> std::same_as<typename SerializationTarget::IntermediaryType>;
-      { serializer<SerializationTarget, ObjectType>::decode(o) } -> std::same_as<ObjectType>;
-    };
+namespace splice::detail
+{
+  /// @brief Checks that a specific type has a serializer specialization that is well-defined
+  ///
+  /// @par Example
+  /// @code
+  /// has_serializer<JSON, float>
+  /// @endcode
+  template<typename SerializationTarget, typename ObjectType>
+  concept has_serializer = requires(ObjectType o, SerializationTarget::IntermediaryType ir) {
+    {
+      splice::flux::serializer<SerializationTarget, ObjectType>::encode(o)
+    } -> std::same_as<typename SerializationTarget::IntermediaryType>;
+    { splice::flux::serializer<SerializationTarget, ObjectType>::decode(o) } -> std::same_as<ObjectType>;
   };
+}
 
+namespace splice::flux
+{
   template<typename SerializationTarget, typename ObjectType>
   SerializationTarget::IntermediaryType encode_intermediary(ObjectType object)
   {
@@ -61,7 +64,6 @@ namespace splice::flux
     } else
     {
       static_assert(false, "No valid serializer found for type");
-      // throw "No valid serializer found for type";
     }
   }
 

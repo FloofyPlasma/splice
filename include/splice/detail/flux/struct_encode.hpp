@@ -9,7 +9,7 @@
 #include "splice/detail/flux/codec_base.hpp"
 #include "splice/detail/meta_core.hpp"
 
-namespace splice::flux::detail
+namespace splice::detail
 {
   template<typename ObjectType>
   consteval bool is_serializable_struct()
@@ -29,7 +29,7 @@ namespace splice::flux::detail
       MemberType StructType::*MemberPointer>
   SerializationTarget::IntermediaryType struct_member_encoder(StructType &object)
   {
-    return encode_intermediary<SerializationTarget>(object.*MemberPointer);
+    return flux::encode_intermediary<SerializationTarget>(object.*MemberPointer);
   }
 
   template<typename SerializationTarget, typename StructType>
@@ -70,12 +70,12 @@ namespace splice::flux::detail
       return member_encoders;
     }();
 
-    MapObject<SerializationTarget> result;
+    flux::MapObject<SerializationTarget> result;
     for (auto encoder_pair: member_encoders)
     {
       std::string key = static_cast<std::string>(std::get<0>(encoder_pair));
       result[key] = std::get<1>(encoder_pair)(object);
     }
-    return encode_intermediary<SerializationTarget>(result);
+    return flux::encode_intermediary<SerializationTarget>(result);
   }
 };
