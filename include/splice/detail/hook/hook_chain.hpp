@@ -97,7 +97,9 @@ namespace splice::detail
     /// Can be replaced to wrap or override the original behaviour entirely.
     Fn original;
 
-    std::tuple<std::vector<HookEntry<std::function<std::conditional_t<std::is_reference_v<Args>, void, Args>(Args)>>>...> arg_hooks;
+    std::tuple<
+        std::vector<HookEntry<std::function<std::conditional_t<std::is_reference_v<Args>, void, Args>(Args)>>>...>
+        arg_hooks;
 
     /// @brief Hooks registered at `InjectPoint::Head`, sorted ascending by
     /// priority on insertion.
@@ -204,7 +206,7 @@ namespace splice::detail
           if constexpr (!std::is_reference_v<std::tuple_element_t<i, std::tuple<Args...>>>)
             std::get<i>(arg_tuple) = std::invoke([&e](auto a) { return e.fn(a); }, std::get<i>(arg_tuple));
           else
-            std::invoke([&e](auto&& a){ e.fn(a); }, std::move(std::get<i>(arg_tuple)));
+            std::invoke([&e](auto &&a) { e.fn(a); }, std::move(std::get<i>(arg_tuple)));
         }
       }
     }

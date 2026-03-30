@@ -539,30 +539,30 @@ TEST_CASE("instanced modify_arg class injections function", "[registry][class_in
   REQUIRE(ptr->v == 2.0f);
 }
 
-class DummyObject2 {
-    public:
-    [[= splice::hook::hookable{}]]int func(int& i) { return i; }
+class DummyObject2
+{
+public:
+  [[= splice::hook::hookable { }]] int func(int &i) { return i; }
 };
 
 SPLICE_HOOK_REGISTRY(DummyObject2, g_obj2);
 
-class Test11 {
-    public:
-    [[= splice::hook::modify_arg{.what = ^^DummyObject2::func, .arg = 0}]]
-        static void hook(int& i) {
-            i = 15;
-        }
+class Test11
+{
+public:
+  [[= splice::hook::modify_arg { .what = ^^DummyObject2::func, .arg = 0 }]] static void hook(int &i) { i = 15; }
 };
 
-TEST_CASE("modify_arg works with reference types", "[registry][modify_arg]") {
-    auto result = g_obj2->inject_all_static<Test11>();
+TEST_CASE("modify_arg works with reference types", "[registry][modify_arg]")
+{
+  auto result = g_obj2->inject_all_static<Test11>();
 
-    REQUIRE(result.has_value());
+  REQUIRE(result.has_value());
 
-    int i = 2;
-    DummyObject2 obj;
-    int res = g_obj2->dispatch<^^DummyObject2::func>(&obj, i);
+  int i = 2;
+  DummyObject2 obj;
+  int res = g_obj2->dispatch<^^DummyObject2::func>(&obj, i);
 
-    REQUIRE(res == 15);
-    REQUIRE(i == 15);
+  REQUIRE(res == 15);
+  REQUIRE(i == 15);
 }
