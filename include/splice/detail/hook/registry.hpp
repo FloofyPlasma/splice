@@ -397,14 +397,16 @@ namespace splice::hook
     }
 
     template<std::meta::info m>
-    consteval void __attribute__((always_inline)) checkMethod() {
-        constexpr bool r_is_function = std::meta::is_function(m);
-        constexpr bool r_is_of_registry_class = std::meta::parent_of(m) == ^^T;
-        constexpr bool r_is_hookable_function = std::define_static_array(annotations_of_with_type(m, ^^splice::hook::hookable)).size() != 0;
-        static_assert(r_is_function, "Reflection is not a function");
-        static_assert(r_is_of_registry_class, "Reflection is not for the registry class");
-        if constexpr (r_is_function)
-          static_assert(r_is_hookable_function, "Reflected function is not hookable");
+    consteval void __attribute__((always_inline)) checkMethod()
+    {
+      constexpr bool r_is_function = std::meta::is_function(m);
+      constexpr bool r_is_of_registry_class = std::meta::parent_of(m) == ^^T;
+      constexpr bool r_is_hookable_function
+          = std::define_static_array(annotations_of_with_type(m, ^^splice::hook::hookable)).size() != 0;
+      static_assert(r_is_function, "Reflection is not a function");
+      static_assert(r_is_of_registry_class, "Reflection is not for the registry class");
+      if constexpr (r_is_function)
+        static_assert(r_is_hookable_function, "Reflected function is not hookable");
     }
   };
 
