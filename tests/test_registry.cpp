@@ -566,3 +566,30 @@ TEST_CASE("modify_arg works with reference types", "[registry][modify_arg]")
   REQUIRE(res == 15);
   REQUIRE(i == 15);
 }
+
+class Test12
+{
+public:
+  int v = 0;
+  [[= splice::hook::modify_arg { .what = ^^DummyObject2::func, .arg = 0 }]] void hook(int &i)
+  {
+    v = i;
+    i = 15;
+  }
+};
+
+TEST_CASE("Instanced modify_arg works with reference types", "[registry][class_inject][modify_arg]")
+{
+  auto ptr = std::make_shared<Test12>();
+  auto result = g_obj2->inject_all_instanced(ptr);
+
+  REQUIRE(result.has_value());
+
+  int i = 2;
+  DummyObject2 obj;
+  int res = g_obj2->dispatch<^^DummyObject2::func>(&obj, i);
+
+  REQUIRE(res == 15);
+  REQUIRE(i == 15);
+  REQUIRE(ptr->v == 2);
+}

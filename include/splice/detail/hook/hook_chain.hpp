@@ -204,9 +204,9 @@ namespace splice::detail
         for (auto &e: vec)
         {
           if constexpr (!std::is_reference_v<std::tuple_element_t<i, std::tuple<Args...>>>)
-            std::get<i>(arg_tuple) = std::invoke([&e](auto a) { return e.fn(a); }, std::get<i>(arg_tuple));
+            std::get<i>(arg_tuple) = e.fn(std::get<i>(arg_tuple));
           else
-            std::invoke([&e](auto &&a) { e.fn(a); }, std::move(std::get<i>(arg_tuple)));
+            e.fn(std::get<i>(arg_tuple));
         }
       }
     }

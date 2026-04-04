@@ -304,13 +304,15 @@ namespace splice::hook
               if constexpr (std::meta::parent_of(a.what) == ^^T)
               {
                 using Type = std::tuple_element_t<a.arg, splice::detail::ParamTuple<a.what>>;
-                constexpr auto fn = std::meta::extract<Type (Source::*)(Type)>(m);
+                using RType = std::conditional_t<std::is_reference_v<Type>, void, Type>;
+                constexpr auto fn = std::meta::extract<RType (Source::*)(Type)>(m);
                 std::weak_ptr<Source> wp = ptr;
-                auto wrapper = [src = std::move(wp), &fn](auto arg) mutable
+                auto wrapper = [src = std::move(wp), &fn](auto &&arg) mutable
                 {
                   if (auto ptr = src.lock(); ptr)
                     return (ptr.get()->*fn)(arg);
-                  return arg;
+                  if constexpr (!std::is_void_v<RType>)
+                    return arg;
                 };
                 auto ret = chain<a.what>().template add_modify_arg<a.arg + 1>(wrapper, a.priority);
                 if (!ret)
