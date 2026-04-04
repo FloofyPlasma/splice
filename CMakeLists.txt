@@ -11,6 +11,7 @@ project(
 option(SPLICE_BUILD_TESTS "Build splice tests" OFF)
 option(SPLICE_BUILD_EXAMPLES "Build splice examples" OFF)
 option(SPLICE_BUILD_MODULE "Build splice as a C++ module" OFF)
+option(SPLICE_FLUX_ENABLE_JSON "Enable the built-in JSON target for flux based on nlohmann-json" OFF)
 
 if (SPLICE_BUILD_MODULE)
         add_library(splice)
@@ -82,3 +83,11 @@ install(
         ${CMAKE_CURRENT_BINARY_DIR}/spliceConfigVersion.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/splice
 )
+
+# Additional library support
+
+if (SPLICE_FLUX_ENABLE_JSON)
+        find_package(nlohmann_json REQUIRED)
+        target_link_libraries(splice INTERFACE nlohmann_json::nlohmann_json)
+        target_compile_definitions(splice INTERFACE SPLICE_FLUX_ENABLE_JSON)
+endif ()
