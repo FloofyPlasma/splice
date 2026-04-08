@@ -178,7 +178,7 @@ namespace splice::hook
 
       static_assert(ArgIndex < std::tuple_size_v<Params>, "modify_arg: ArgIndex is out of range for this method.");
 
-      // add 1 to skip `this` pointer from dispatch
+      // add 1 to skip implicit `this`
       return chain<Method>().template add_modify_arg<ArgIndex + 1>(fn, priority);
     }
 
@@ -250,15 +250,16 @@ namespace splice::hook
             if constexpr (std::meta::type_of(a_m) == ^^const splice::hook::modify_arg)
             {
               constexpr splice::hook::modify_arg a = std::meta::extract<splice::hook::modify_arg>(a_m);
-              if constexpr (std::meta::parent_of(a.what) == ^^T)
+              if constexpr (std::meta::parent_of(a.what) == ^^T) // only try to register hooks for the registry's type
               {
+                // add 1 to skip implicit `this`
                 auto ret = chain<a.what>().template add_modify_arg<a.arg + 1>([:m:], a.priority);
                 if (!ret)
                   return ret;
               }
             }
           }
-        }
+        } // is_static_member
       }
       return { };
     }
@@ -281,6 +282,7 @@ namespace splice::hook
           template for (constexpr std::meta::info a_m: [:std::meta::reflect_constant_array(
                                                              std::meta::annotations_of(m)):])
           {
+            // Normal injection
             if constexpr (std::meta::type_of(a_m) == ^^const splice::hook::injection)
             {
               constexpr splice::hook::injection a = std::meta::extract<splice::hook::injection>(a_m);
@@ -291,7 +293,7 @@ namespace splice::hook
                 std::weak_ptr<Source> wp = ptr;
                 auto wrapper = [src = std::move(wp), &fn](Chain::CI &ci, auto &&...args) mutable
                 {
-                  if (auto ptr = src.lock(); ptr)
+                  if (auto ptr = src.lock(); ptr) // make sure ptr is still valid
                     (ptr.get()->*fn)(ci, (args)...);
                 };
 
@@ -299,30 +301,33 @@ namespace splice::hook
                 if (!ret)
                   return ret;
               }
-            }
+            } // Normal injection
+            // modify_arg injection
             if constexpr (std::meta::type_of(a_m) == ^^const splice::hook::modify_arg)
             {
               constexpr splice::hook::modify_arg a = std::meta::extract<splice::hook::modify_arg>(a_m);
-              if constexpr (std::meta::parent_of(a.what) == ^^T)
+              if constexpr (std::meta::parent_of(a.what) == ^^T) // only try to register hooks for the registry's type
               {
                 using Type = std::tuple_element_t<a.arg, splice::detail::ParamTuple<a.what>>;
+                // If parameter type is a reference then the hook returns void
                 using RType = std::conditional_t<std::is_reference_v<Type>, void, Type>;
                 constexpr auto fn = std::meta::extract<RType (Source::*)(Type)>(m);
                 std::weak_ptr<Source> wp = ptr;
                 auto wrapper = [src = std::move(wp), &fn](auto &&arg) mutable
                 {
-                  if (auto ptr = src.lock(); ptr)
+                  if (auto ptr = src.lock(); ptr) // make sure ptr is still valid
                     return (ptr.get()->*fn)(arg);
-                  if constexpr (!std::is_void_v<RType>)
+                  if constexpr (!std::is_void_v<RType>) // only add a return if non-void return type
                     return arg;
                 };
+                // add 1 to skip implicit `this`
                 auto ret = chain<a.what>().template add_modify_arg<a.arg + 1>(wrapper, a.priority);
                 if (!ret)
                   return ret;
               }
-            }
+            } // modify_arg injection
           }
-        }
+        } // !is_static_member
       }
       return { };
     }
@@ -364,6 +369,8 @@ namespace splice::hook
       std::println("[splice::hook] registry for {}:", std::string(std::meta::identifier_of(^^T)));
       template for (constexpr std::meta::info m: Methods)
       {
+        // subtract 1 from size to avoid counting `this` pointer
+        print_arg_hooks<m>(std::make_index_sequence<std::tuple_size_v<decltype(chain<m>().arg_hooks)> - 1>());
         std::println("  [{:<20}]  head: {}  tail: {}  return: {}", std::string(std::meta::identifier_of(m)),
             chain<m>().head_count(), chain<m>().tail_count(), chain<m>().return_count());
       }
@@ -409,6 +416,22 @@ namespace splice::hook
       static_assert(r_is_of_registry_class, "Reflection is not for the registry class");
       if constexpr (r_is_function)
         static_assert(r_is_hookable_function, "Reflected function is not hookable");
+    }
+
+    template<std::meta::info m, std::size_t... Idxs>
+    void print_arg_hooks(std::index_sequence<Idxs...>) const
+    {
+      constexpr auto params = std::define_static_array(std::meta::parameters_of(m));
+      template for (constexpr std::size_t idx: { Idxs... })
+      {
+        // add 1 to skip `this`
+        std::size_t count = chain<m>().template modify_arg_count<idx + 1>();
+        if (count != 0)
+        {
+          std::println("    [modify_arg {:<2}]      ({}): {}", idx,
+              std::string(std::meta::display_string_of(std::meta::type_of(params[idx]))), count);
+        }
+      }
     }
   };
 

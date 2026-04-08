@@ -97,6 +97,9 @@ namespace splice::detail
     /// Can be replaced to wrap or override the original behaviour entirely.
     Fn original;
 
+    /// @brief Tuple of vectors representing hooks registered through
+    /// `add_modify_arg`. The vector at `std::get<0>` should always be
+    /// empty.
     std::tuple<
         std::vector<HookEntry<std::function<std::conditional_t<std::is_reference_v<Args>, void, Args>(Args)>>>...>
         arg_hooks;
@@ -123,6 +126,13 @@ namespace splice::detail
 
     /// @brief Returns the number of hooks registered at `Return`.
     size_t return_count() const { return return_hooks.size(); }
+
+    /// @brief Returns the number of hooks registered for arg @p Idx
+    template<std::size_t Idx>
+    size_t modify_arg_count() const
+    {
+      return std::get<Idx>(arg_hooks).size();
+    }
 
     /// @brief Registers a hook at the given inject @p point with the given @p
     /// priority.
