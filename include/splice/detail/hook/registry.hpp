@@ -361,19 +361,28 @@ namespace splice::hook
     /// @par Example output
     /// @code
     /// [splice::hook] registry for GameWorld:
-    ///   [mineBlock            ]  head: 1  tail: 1  return: 0
-    ///   [calcDamage           ]  head: 0  tail: 0  return: 1
+    ///   [mineBlock           ]  head: 1  tail: 1  return: 0
+    ///     [modify_arg player ]  (Player*): 5
+    ///   [calcDamage          ]  head: 0  tail: 0  return: 1
     /// @endcode
-    void print_registry() const
+    void print_registry(bool show_all = false) const
     {
-      std::println("[splice::hook] registry for {}:", std::string(std::meta::identifier_of(^^T)));
+      std::string out { };
+      std::print("[splice::hook] registry for {}:", std::string(std::meta::identifier_of(^^T)));
       template for (constexpr std::meta::info m: Methods)
       {
         // subtract 1 from size to avoid counting `this` pointer
-        print_arg_hooks<m>(std::make_index_sequence<std::tuple_size_v<decltype(chain<m>().arg_hooks)> - 1>());
-        std::println("  [{:<20}]  head: {}  tail: {}  return: {}", std::string(std::meta::identifier_of(m)),
-            chain<m>().head_count(), chain<m>().tail_count(), chain<m>().return_count());
+        auto s = print_arg_hooks<m>(
+            show_all, std::make_index_sequence<std::tuple_size_v<decltype(chain<m>().arg_hooks)> - 1>());
+
+        if (chain<m>().head_count() + chain<m>().tail_count() + chain<m>().return_count() != 0 || !s.empty()
+            || show_all)
+          out += std::format("\n  [{:<20}]  head: {}  tail: {}  return: {}{}", std::string(std::meta::identifier_of(m)),
+              chain<m>().head_count(), chain<m>().tail_count(), chain<m>().return_count(), s);
       }
+      if (out.empty())
+        out = "\n  No hooks registered.";
+      std::println("{}", out);
     }
 
   private:
@@ -406,7 +415,7 @@ namespace splice::hook
     }
 
     template<std::meta::info m>
-    consteval void __attribute__((always_inline)) checkMethod()
+    consteval void __attribute__((always_inline)) checkMethod() const
     {
       constexpr bool r_is_function = std::meta::is_function(m);
       constexpr bool r_is_of_registry_class = std::meta::parent_of(m) == ^^T;
@@ -419,19 +428,28 @@ namespace splice::hook
     }
 
     template<std::meta::info m, std::size_t... Idxs>
-    void print_arg_hooks(std::index_sequence<Idxs...>) const
+    std::string print_arg_hooks(bool show_all, std::index_sequence<Idxs...>) const
     {
       constexpr auto params = std::define_static_array(std::meta::parameters_of(m));
+      std::string s { };
       template for (constexpr std::size_t idx: { Idxs... })
       {
         // add 1 to skip `this`
         std::size_t count = chain<m>().template modify_arg_count<idx + 1>();
-        if (count != 0)
+        if (count != 0 || show_all)
         {
-          std::println("    [modify_arg {:<2}]      ({}): {}", idx,
-              std::string(std::meta::display_string_of(std::meta::type_of(params[idx]))), count);
+          constexpr std::meta::info param = params[idx];
+          s += "\n";
+          std::string id { };
+          if constexpr (std::meta::has_identifier(param))
+            id = std::meta::identifier_of(param);
+          else
+            id = "unnamed"; // there's probably a better option but oh well
+          s += std::format("    [modify_arg {:<7}]  ({}): {}", id,
+              std::string(std::meta::display_string_of(std::meta::type_of(param))), count);
         }
       }
+      return s;
     }
   };
 
