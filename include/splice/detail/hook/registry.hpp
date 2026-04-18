@@ -358,11 +358,14 @@ namespace splice::hook
     /// Useful during development to verify that hooks are being registered as
     /// expected.
     ///
+    /// @param show_all If true, does not hide any methods, regardless of if no
+    /// hooks are registered
+    ///
     /// @par Example output
     /// @code
     /// [splice::hook] registry for GameWorld:
     ///   [mineBlock           ]  head: 1  tail: 1  return: 0
-    ///     [modify_arg player ]  (Player*): 5
+    ///     [modify_arg player ]  (Player*): 2
     ///   [calcDamage          ]  head: 0  tail: 0  return: 1
     /// @endcode
     void print_registry(bool show_all = false) const
