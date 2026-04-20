@@ -6,3 +6,4 @@
 
 #include "splice/hook.hpp"
 #include "splice/wire.hpp"
+#include "splice/flux.hpp"
